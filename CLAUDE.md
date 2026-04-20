@@ -131,6 +131,9 @@ first; don't just install it.
   approval.
 - **Commit in logical chunks.** After a working slice of functionality,
   suggest a commit with a clear message.
+- **Warn before long tasks.** Before starting any work estimated to take
+  over one minute, stop and state: what you're about to do, how long it
+  will take, and wait for explicit approval before the first tool call.
 
 ## Automation, subagents, and tooling — a staged approach
 

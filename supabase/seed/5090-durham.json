@@ -1,0 +1,634 @@
+{
+  "_comment": "Seed data for 5090 Durham Rd, Pipersville PA. Edit freely — run scripts/seed-property.ts to load.",
+  "property_id": "a1b2c3d4-0000-0000-0000-000000000001",
+  "users": {
+    "brady": "e92c19e9-9b8d-4ef7-85f1-c5452810b2b8",
+    "erin":  "d3ead3ef-3af4-46c9-8c48-0b5dab3ed21e"
+  },
+
+  "assets": [
+    {
+      "id":          "550e8400-e29b-41d4-a716-446655440001",
+      "name":        "Main House",
+      "asset_type":  "structure",
+      "description": "Primary residence. ~2,400 sq ft. Multiple rooms currently in active renovation."
+    },
+    {
+      "id":          "550e8400-e29b-41d4-a716-446655440002",
+      "name":        "Main Barn",
+      "asset_type":  "barn",
+      "description": "Primary barn. Contains existing indoor chicken coops. Equipment storage."
+    },
+    {
+      "id":          "550e8400-e29b-41d4-a716-446655440003",
+      "name":        "Barn 2",
+      "asset_type":  "barn",
+      "description": "Secondary barn. Future uses TBD — potential home gym, additional animal housing."
+    },
+    {
+      "id":          "550e8400-e29b-41d4-a716-446655440004",
+      "name":        "Pool",
+      "asset_type":  "water-feature",
+      "description": "In-ground pool. Currently being assessed. Target: salt conversion and full commissioning."
+    },
+    {
+      "id":          "550e8400-e29b-41d4-a716-446655440005",
+      "name":        "Pond & Fountain",
+      "asset_type":  "water-feature",
+      "description": "Decorative pond with fountain. Currently operational but in need of repair."
+    },
+    {
+      "id":          "550e8400-e29b-41d4-a716-446655440006",
+      "name":        "Dog Yard",
+      "asset_type":  "fenced-area",
+      "description": "Fenced yard area for the dog. Fencing recently installed."
+    },
+    {
+      "id":          "550e8400-e29b-41d4-a716-446655440007",
+      "name":        "Riding Mower",
+      "asset_type":  "equipment",
+      "description": "Primary lawn mowing equipment. Currently in use but needs repair."
+    },
+    {
+      "id":          "550e8400-e29b-41d4-a716-446655440008",
+      "name":        "Back Field",
+      "asset_type":  "field",
+      "description": "Open land at rear of property. Being reviewed for zoning between crops and animal pasture."
+    }
+  ],
+
+  "projects": [
+    {
+      "id":          "660e8400-e29b-41d4-a716-446655440001",
+      "name":        "Main House Interior Refresh",
+      "domain":      "renovation",
+      "status":      "active",
+      "priority":    "high",
+      "description": "Painting, lighting, and furnishing across all main house rooms. Significant progress made — master bedroom, laundry, living room, guest bath, office, and hallway painted and lit. New couch installed. Remaining: furniture sourcing, room punch lists, exterminator.",
+      "tasks": [
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440001",
+          "title":  "Source dining room furniture",
+          "status": "todo",
+          "assigned_to": "brady"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440002",
+          "title":  "Source living room custom or antique pieces",
+          "status": "todo",
+          "assigned_to": "erin"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440003",
+          "title":  "Master bedroom — remaining furnishings and finishing touches",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440004",
+          "title":  "Laundry room — punch list",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440005",
+          "title":  "Guest bathroom — punch list",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440006",
+          "title":  "Office — punch list",
+          "status": "todo"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-446655440007",
+          "title":       "Exterminator — first treatment",
+          "status":      "in_progress",
+          "description": "Scheduled. Follow up after treatment to assess."
+        }
+      ],
+      "budget_lines": [
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440001",
+          "description": "Dining room furniture",
+          "amount":      3000,
+          "line_type":   "estimated",
+          "category":    "furnishings"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440002",
+          "description": "Living room custom / antique pieces",
+          "amount":      4000,
+          "line_type":   "estimated",
+          "category":    "furnishings"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440003",
+          "description": "Remaining lighting and hardware",
+          "amount":      500,
+          "line_type":   "estimated",
+          "category":    "lighting"
+        }
+      ]
+    },
+
+    {
+      "id":          "660e8400-e29b-41d4-a716-446655440002",
+      "name":        "Kitchen Renovation",
+      "domain":      "renovation",
+      "status":      "planned",
+      "priority":    "high",
+      "description": "Full kitchen renovation. Scope and budget TBD — needs definition before contractor engagement.",
+      "tasks": [
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440008",
+          "title":  "Define scope and wish list",
+          "status": "todo",
+          "assigned_to": "erin"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440009",
+          "title":  "Set budget ceiling",
+          "status": "todo",
+          "assigned_to": "brady"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544000a",
+          "title":  "Get 3 contractor quotes",
+          "status": "todo"
+        }
+      ],
+      "budget_lines": [
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440004",
+          "description": "Kitchen renovation — total (rough placeholder)",
+          "amount":      30000,
+          "line_type":   "estimated",
+          "category":    "renovation"
+        }
+      ]
+    },
+
+    {
+      "id":          "660e8400-e29b-41d4-a716-446655440003",
+      "name":        "Guest Spaces",
+      "domain":      "renovation",
+      "status":      "planned",
+      "priority":    "medium",
+      "description": "Finish the guest areas — floor refinishing and furniture. Scope to be defined.",
+      "tasks": [
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544000b",
+          "title":  "Assess floor condition in guest spaces",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544000c",
+          "title":  "Get floor refinishing quotes",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544000d",
+          "title":  "Plan guest space furniture",
+          "status": "todo"
+        }
+      ],
+      "budget_lines": [
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440005",
+          "description": "Floor refinishing — guest spaces",
+          "amount":      3000,
+          "line_type":   "estimated",
+          "category":    "flooring"
+        }
+      ]
+    },
+
+    {
+      "id":          "660e8400-e29b-41d4-a716-446655440004",
+      "name":        "Lawn & Grounds Restoration",
+      "domain":      "grounds",
+      "status":      "active",
+      "priority":    "high",
+      "description": "Restoring the main house lawn and surrounding grounds from overgrown to managed. Multiple spray rounds done; mower in use but needs repair; dead trees in progress; broader zoning under review.",
+      "tasks": [
+        {
+          "id":          "770e8400-e29b-41d4-a716-44665544000e",
+          "title":       "Repair riding mower",
+          "status":      "in_progress",
+          "assigned_to": "brady"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544000f",
+          "title":  "Weed spray treatment — next round",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440010",
+          "title":  "Assess and prioritize remaining dead trees",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440011",
+          "title":  "Stack remaining cut firewood",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440012",
+          "title":  "Define crop vs. animal zoning plan for back field",
+          "status": "todo",
+          "assigned_to": "brady"
+        }
+      ],
+      "budget_lines": [
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440006",
+          "description": "Mower repair",
+          "amount":      400,
+          "line_type":   "estimated",
+          "category":    "equipment"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440007",
+          "description": "Weed treatment supplies",
+          "amount":      200,
+          "line_type":   "estimated",
+          "category":    "lawn"
+        }
+      ]
+    },
+
+    {
+      "id":          "660e8400-e29b-41d4-a716-446655440005",
+      "name":        "Pond & Fountain Repair",
+      "domain":      "maintenance",
+      "status":      "planned",
+      "priority":    "medium",
+      "description": "Pond and fountain are operational but degraded. Needs pump assessment, liner check, and cosmetic cleanup.",
+      "tasks": [
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440013",
+          "title":  "Assess pond pump and liner condition",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440014",
+          "title":  "Get repair quote",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440015",
+          "title":  "Clean and clear pond surround",
+          "status": "todo"
+        }
+      ],
+      "budget_lines": [
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440008",
+          "description": "Pond and fountain repair",
+          "amount":      800,
+          "line_type":   "estimated",
+          "category":    "maintenance"
+        }
+      ]
+    },
+
+    {
+      "id":          "660e8400-e29b-41d4-a716-446655440006",
+      "name":        "Pool Restoration",
+      "domain":      "maintenance",
+      "status":      "active",
+      "priority":    "high",
+      "description": "Assessment scheduled. Goal: saltwater conversion, any structural or equipment repairs, and full commissioning for summer.",
+      "tasks": [
+        {
+          "id":          "770e8400-e29b-41d4-a716-446655440016",
+          "title":       "Review pool assessment report",
+          "status":      "in_progress",
+          "description": "Pool person scheduled. Waiting on report."
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440017",
+          "title":  "Get salt conversion quote",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440018",
+          "title":  "Address structural and equipment repairs",
+          "status": "todo"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-446655440019",
+          "title":       "Convert to salt system",
+          "status":      "todo",
+          "due_date":    "2026-05-31"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-44665544001a",
+          "title":       "Open and commission pool for summer",
+          "status":      "todo",
+          "due_date":    "2026-06-07"
+        }
+      ],
+      "budget_lines": [
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440009",
+          "description": "Pool assessment",
+          "amount":      200,
+          "line_type":   "estimated",
+          "category":    "maintenance"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-44665544000a",
+          "description": "Salt conversion system and installation",
+          "amount":      2500,
+          "line_type":   "estimated",
+          "category":    "pool"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-44665544000b",
+          "description": "Structural and equipment repairs (contingency)",
+          "amount":      1500,
+          "line_type":   "estimated",
+          "category":    "pool"
+        }
+      ]
+    },
+
+    {
+      "id":          "660e8400-e29b-41d4-a716-446655440007",
+      "name":        "Chicken Flock — Year 1",
+      "domain":      "farm",
+      "status":      "planned",
+      "priority":    "medium",
+      "description": "Establish a laying flock. Indoor coops exist in Main Barn; outdoor run needs to be built. Start with a small flock of laying hens.",
+      "tasks": [
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544001b",
+          "title":  "Design outdoor chicken run",
+          "status": "todo",
+          "assigned_to": "brady"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544001c",
+          "title":  "Build outdoor chicken run",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544001d",
+          "title":  "Inspect and prep indoor coop in Main Barn",
+          "status": "todo"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-44665544001e",
+          "title":       "Order day-old chicks or started pullets",
+          "status":      "todo",
+          "due_date":    "2026-05-15",
+          "description": "Decide between day-old chicks (cheaper, more work) vs. started pullets (costlier, faster to lay)."
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544001f",
+          "title":  "Set up brooder",
+          "status": "todo",
+          "due_date": "2026-05-20"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-446655440020",
+          "title":       "Move pullets to coop",
+          "status":      "todo",
+          "due_date":    "2026-07-15",
+          "description": "Once feathered out and old enough for outdoor living."
+        }
+      ],
+      "budget_lines": [
+        {
+          "id":          "880e8400-e29b-41d4-a716-44665544000c",
+          "description": "Outdoor run construction materials",
+          "amount":      650,
+          "line_type":   "estimated",
+          "category":    "farm-infrastructure"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-44665544000d",
+          "description": "Chicks or started pullets",
+          "amount":      180,
+          "line_type":   "estimated",
+          "category":    "livestock"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-44665544000e",
+          "description": "Feed and bedding — year 1",
+          "amount":      350,
+          "line_type":   "estimated",
+          "category":    "livestock"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-44665544000f",
+          "description": "Brooder setup (heat lamp, feeder, waterer)",
+          "amount":      120,
+          "line_type":   "estimated",
+          "category":    "livestock"
+        }
+      ]
+    },
+
+    {
+      "id":          "660e8400-e29b-41d4-a716-446655440008",
+      "name":        "Sheep — Planning & Infrastructure",
+      "domain":      "farm",
+      "status":      "planned",
+      "priority":    "low",
+      "description": "Long-term goal: a small sheep flock on the back field. No commitment yet — this phase is about understanding requirements and planning infrastructure.",
+      "tasks": [
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440021",
+          "title":  "Research breeds suited to Bucks County climate and acreage",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440022",
+          "title":  "Define pasture zones for sheep on back field",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440023",
+          "title":  "Assess fencing requirements for sheep pasture",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440024",
+          "title":  "Identify local feed suppliers and large-animal vet",
+          "status": "todo"
+        }
+      ],
+      "budget_lines": []
+    },
+
+    {
+      "id":          "660e8400-e29b-41d4-a716-446655440009",
+      "name":        "Kitchen Garden 2026",
+      "domain":      "farm",
+      "status":      "active",
+      "priority":    "high",
+      "description": "First significant garden plot at 5090 Durham Rd. Significant but manageable — enough to grow real food this season without overcommitting. Location under review.",
+      "tasks": [
+        {
+          "id":          "770e8400-e29b-41d4-a716-446655440025",
+          "title":       "Finalize garden location and dimensions",
+          "status":      "in_progress",
+          "assigned_to": "brady"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-446655440026",
+          "title":       "Plan crop list and layout",
+          "status":      "todo",
+          "due_date":    "2026-04-28"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-446655440027",
+          "title":       "Source seeds and transplants",
+          "status":      "todo",
+          "due_date":    "2026-04-30"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-446655440028",
+          "title":       "Prepare soil — till and amend with compost",
+          "status":      "todo",
+          "due_date":    "2026-05-05"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-446655440029",
+          "title":       "Plant cool-season crops (peas, lettuce, spinach, kale)",
+          "status":      "todo",
+          "due_date":    "2026-04-30"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-44665544002a",
+          "title":       "Plant warm-season crops after last frost (tomatoes, peppers, squash)",
+          "status":      "todo",
+          "due_date":    "2026-05-20"
+        },
+        {
+          "id":          "770e8400-e29b-41d4-a716-44665544002b",
+          "title":       "Install drip irrigation",
+          "status":      "todo",
+          "due_date":    "2026-05-15"
+        }
+      ],
+      "budget_lines": [
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440010",
+          "description": "Soil amendment and compost",
+          "amount":      175,
+          "line_type":   "estimated",
+          "category":    "garden"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440011",
+          "description": "Seeds and transplants",
+          "amount":      200,
+          "line_type":   "estimated",
+          "category":    "garden"
+        },
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440012",
+          "description": "Drip irrigation system",
+          "amount":      275,
+          "line_type":   "estimated",
+          "category":    "garden"
+        }
+      ]
+    },
+
+    {
+      "id":          "660e8400-e29b-41d4-a716-44665544000a",
+      "name":        "Home Automation & Security",
+      "domain":      "home-systems",
+      "status":      "active",
+      "priority":    "medium",
+      "description": "WiFi 7 mesh live throughout house and barns. Motion sensors and cameras installed. Homey hub in place but not fully configured. Lighting automations, arrival/departure triggers, and full system documentation still needed.",
+      "tasks": [
+        {
+          "id":          "770e8400-e29b-41d4-a716-44665544002c",
+          "title":       "Audit all connected devices and identify gaps",
+          "status":      "in_progress",
+          "assigned_to": "brady"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544002d",
+          "title":  "Configure Homey lighting automations",
+          "status": "todo",
+          "assigned_to": "brady"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544002e",
+          "title":  "Map and label all motion sensor and camera zones",
+          "status": "todo"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-44665544002f",
+          "title":  "Set up arrival and departure automations via Homey",
+          "status": "todo",
+          "assigned_to": "brady"
+        },
+        {
+          "id":     "770e8400-e29b-41d4-a716-446655440030",
+          "title":  "Test and document complete system",
+          "status": "todo"
+        }
+      ],
+      "budget_lines": [
+        {
+          "id":          "880e8400-e29b-41d4-a716-446655440013",
+          "description": "Additional sensors or smart switches (contingency)",
+          "amount":      300,
+          "line_type":   "estimated",
+          "category":    "home-systems"
+        }
+      ]
+    }
+  ],
+
+  "timeline_events": [
+    {
+      "id":          "990e8400-e29b-41d4-a716-446655440001",
+      "project_id":  null,
+      "title":       "Last frost date — Pipersville PA (zone 6b)",
+      "description": "Average last frost. Safe to plant tender crops after this date.",
+      "event_date":  "2026-05-15"
+    },
+    {
+      "id":          "990e8400-e29b-41d4-a716-446655440002",
+      "project_id":  "660e8400-e29b-41d4-a716-446655440009",
+      "title":       "Plant cool-season crops",
+      "description": "Peas, lettuce, spinach, kale — can go in now or very soon.",
+      "event_date":  "2026-04-30"
+    },
+    {
+      "id":          "990e8400-e29b-41d4-a716-446655440003",
+      "project_id":  "660e8400-e29b-41d4-a716-446655440009",
+      "title":       "Plant warm-season crops",
+      "description": "Tomatoes, peppers, squash — after last frost.",
+      "event_date":  "2026-05-20"
+    },
+    {
+      "id":          "990e8400-e29b-41d4-a716-446655440004",
+      "project_id":  "660e8400-e29b-41d4-a716-446655440006",
+      "title":       "Pool open for summer",
+      "description": "Target date for pool to be fully commissioned and swimmable.",
+      "event_date":  "2026-06-07"
+    },
+    {
+      "id":          "990e8400-e29b-41d4-a716-446655440005",
+      "project_id":  "660e8400-e29b-41d4-a716-446655440007",
+      "title":       "Move pullets to outdoor coop",
+      "description": "Once feathered out and weather is consistently warm.",
+      "event_date":  "2026-07-15"
+    },
+    {
+      "id":          "990e8400-e29b-41d4-a716-446655440006",
+      "project_id":  null,
+      "title":       "First hard frost — end of growing season",
+      "description": "Average first fall frost. Plan to harvest or protect tender crops before this.",
+      "event_date":  "2026-10-15"
+    }
+  ]
+}
