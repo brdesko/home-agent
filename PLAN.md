@@ -115,7 +115,17 @@ Exit criteria defined when we get there.
 
 Schema gets more specific as we implement. This is a sketch.
 
-## Active slice — Phase 1, Slice 1
+## Active slice — Phase 2, Slice 1
+
+**Goal:** Add the Agent with one capability: accept a natural-language request
+to add a new project, ask clarifying questions, propose the Notebook change,
+and commit it on approval. Target example: "add a home gym project in Barn 2."
+
+**Steps:** TBD — to be planned at the start of the next session.
+
+---
+
+## Completed — Phase 1, Slice 1
 
 **Goal:** stand up the project with Next.js, connect Supabase, set up auth
 and the `User`/`Property`/`PropertyMember` tables with RLS. Get a simple
