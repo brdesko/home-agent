@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__github__search_repositories"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "fetch",
+    "context7"
+  ]
+}
