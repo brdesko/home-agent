@@ -115,13 +115,20 @@ Exit criteria defined when we get there.
 
 Schema gets more specific as we implement. This is a sketch.
 
-## Active slice — Phase 2, Slice 1
+## Active slice — Phase 3, Slice 1
 
-**Goal:** Add the Agent with one capability: accept a natural-language request
-to add a new project, ask clarifying questions, propose the Notebook change,
-and commit it on approval. Target example: "add a home gym project in Barn 2."
+**Goal:** Agent gains the ability to modify existing projects and tasks —
+update status, priority, description, add tasks to an existing project.
+Proves the modify path without yet tackling proactive suggestions.
 
-**Steps:** TBD — to be planned at the start of the next session.
+**Steps:** TBD — to be planned at the start of this slice.
+
+---
+
+## Completed — Phase 2 (Slices 1–2)
+
+Agent with add-project capability, including tasks, budget lines, and
+timeline events. Deployed to Vercel. Phase 2 exit criteria met.
 
 ---
 
