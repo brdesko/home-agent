@@ -178,6 +178,32 @@ it. If any of these steps reveal a problem, we'd much rather find it now.
 **Scope creep watch:** if you find yourself wanting to add Projects or Tasks
 "while we're here," stop. Finish this slice cleanly first.
 
+## Deferred features (captured, not yet sliced)
+
+### Goals layer and summary UI
+The Notebook needs a layer *above* projects: named **Goals** — high-level
+outcomes that multiple projects contribute toward (e.g. "Working animal farm,"
+"Sustainable garden," "Fully renovated main house"). Goals keep priorities
+visible as the project list grows.
+
+Required work:
+- Data model: `goals` table (name, description, status, priority) with an
+  optional `goal_id` FK on `projects` so projects roll up to a Goal.
+- Summary UI: top-level tabs for Active Projects, Budget & Breakdown, and
+  Goals — so the big picture is always one click away from the detail view.
+- Agent awareness: when proposing or modifying projects, Agent should surface
+  which Goal is affected and flag if a change conflicts with a stated priority.
+
+This should be designed before the Notebook UI gets much more complex, and
+the data model change (adding `goal_id` to `projects`) is a migration that
+gets easier to do while the table is still small.
+
+Suggested timing: introduce `goals` table in Phase 3 Slice 2 or 3, alongside
+the interactive completion work, so the Agent can reference goals when asking
+"how did it go?" follow-up questions.
+
+---
+
 ## Open questions
 
 - **Email magic link vs. password.** Magic links are friendlier for a
