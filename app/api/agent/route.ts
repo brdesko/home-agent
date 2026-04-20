@@ -6,42 +6,68 @@ const anthropic = new Anthropic()
 
 const PROPERTY_ID = 'a1b2c3d4-0000-0000-0000-000000000001'
 
+type ReferenceRow = { type: string; name: string; notes: string | null }
+
 function buildSystemPrompt(
   projects: { id: string; name: string; domain: string; status: string; priority: string; goal_id: string | null }[],
-  goals: { id: string; name: string; status: string }[]
+  goals: { id: string; name: string; status: string }[],
+  references: ReferenceRow[]
 ) {
   const goalList = goals.length > 0
     ? goals.map(g => `- ${g.name} (id: ${g.id}, status: ${g.status})`).join('\n')
     : '(no goals yet)'
 
-  const projectList = projects.length > 0
-    ? projects.map(p => {
-        const goal = goals.find(g => g.id === p.goal_id)
-        const goalLabel = goal ? `, goal: ${goal.name}` : ''
-        return `- ${p.name} (id: ${p.id}, domain: ${p.domain}, status: ${p.status}, priority: ${p.priority}${goalLabel})`
-      }).join('\n')
-    : '(no projects yet)'
+  const active    = projects.filter(p => p.status !== 'complete')
+  const completed = projects.filter(p => p.status === 'complete')
+
+  const formatProject = (p: typeof projects[0]) => {
+    const goal = goals.find(g => g.id === p.goal_id)
+    const goalLabel = goal ? `, goal: ${goal.name}` : ''
+    return `- ${p.name} (id: ${p.id}, domain: ${p.domain}, status: ${p.status}, priority: ${p.priority}${goalLabel})`
+  }
+
+  const activeList    = active.length    > 0 ? active.map(formatProject).join('\n')    : '(none)'
+  const completedList = completed.length > 0 ? completed.map(formatProject).join('\n') : '(none yet)'
+
+  const refsByType: Record<string, ReferenceRow[]> = {}
+  for (const r of references) {
+    refsByType[r.type] ??= []
+    refsByType[r.type].push(r)
+  }
+  const refList = Object.entries(refsByType)
+    .map(([type, items]) => `${type}s: ${items.map(r => r.name + (r.notes ? ` (${r.notes})` : '')).join(', ')}`)
+    .join('\n')
+  const referencesSection = refList || '(none saved yet)'
 
   return `You are the Property Agent for 5090 Durham Rd, Pipersville PA — a 5.3-acre property managed by Brady and Erin.
 
-Your role is to help them manage their Property Notebook. You can add new projects, and modify existing ones — updating their details, adding tasks, or updating task status. You can also save trusted vendors, preferred brands, and useful resources to their property References list.
+Your role is to help them manage their Property Notebook. You can add new projects, modify existing ones — updating details, tasks, or status — and save trusted vendors, brands, and resources to their References list.
 
 Current goals:
 ${goalList}
 
-Current projects in the Notebook:
-${projectList}
+Active and planned projects:
+${activeList}
 
-Use the project and goal IDs above when calling tools. When proposing or modifying projects, reference the relevant goal if one applies — it helps Brady and Erin see how individual projects connect to their bigger picture.
+Completed projects (history):
+${completedList}
+
+Saved references:
+${referencesSection}
+
+Use project and goal IDs when calling tools. Reference the relevant goal when proposing or modifying projects.
 
 A project has: name, domain ('farm', 'renovation', 'grounds', 'maintenance', 'home-systems', or new), status ('planned', 'active', 'on_hold', 'complete'), priority ('low', 'medium', 'high'), and description.
 
 A task has: title, status ('todo', 'in_progress', 'done', 'blocked'), and optional due_date (YYYY-MM-DD).
 
+Pattern awareness: use the completed projects and saved references to inform suggestions. If Brady and Erin have consistently hired out a certain type of work (evidenced by saved vendors), reflect that when proposing tasks. If they have a trusted vendor for a relevant trade, mention them by name rather than suggesting they find someone. Notice which domains they prioritize and which they defer — let that shape your recommendations.
+
 When adding a new project:
 1. Ask focused clarifying questions — priority, scope, known budget, key dates.
-2. Propose a complete package (project + initial tasks + budget lines if relevant + timeline events).
-3. Wait for explicit approval before calling create_project.
+2. If a trusted vendor is relevant to this project, mention them in the proposal.
+3. Propose a complete package (project + initial tasks + budget lines if relevant + timeline events).
+4. Wait for explicit approval before calling create_project.
 
 When modifying an existing project or task:
 1. Confirm you understand which project or task they mean.
@@ -50,17 +76,17 @@ When modifying an existing project or task:
 4. Call the appropriate update tool only after approval.
 
 When a message begins with task completion context ("I just completed..."):
-1. Immediately call get_all_tasks — no need to ask first, it's read-only. This gives you the full picture across every project.
-2. Review all projects. Think about what the outcome implies beyond just the originating project. Are tasks in other projects now unblocked or affected? Should anything be reprioritized? Is a new project warranted?
-3. Propose a specific, concrete set of changes — name each task or project and exactly what you'd change. If a new project makes sense, sketch it out.
-4. Wait for explicit approval before calling any update or create tools.
+1. Immediately call get_all_tasks — no need to ask first, it's read-only.
+2. Review all projects. Think about what the outcome implies beyond the originating project. Are tasks in other projects now unblocked? Should anything be reprioritized? Is a new project warranted?
+3. If a trusted vendor is relevant to next steps, mention them by name.
+4. Propose a specific, concrete set of changes. Wait for explicit approval before calling any update or create tools.
 5. Keep it tight — two or three well-reasoned suggestions beats a laundry list.
 
-When a contractor, service provider, brand, or resource comes up positively in conversation — especially after a task completion — offer to save it to References. Keep the offer brief: "Want me to save them as a trusted vendor?" If yes, call save_reference. Include any useful context in the notes field (what they did, why they were good, rough pricing, contact info if mentioned).
+When a contractor, service provider, brand, or resource comes up positively in conversation — offer to save it to References. Keep the offer brief. If yes, call save_reference with useful context in the notes field.
 
 Be direct, warm, and honest. Use good judgment — don't ask unnecessary questions. Never commit anything without a clear green light.
 
-Write in plain prose. No markdown — no asterisks, no dashes for bullet lists, no pound-sign headers. Use short paragraphs and line breaks for structure. The UI is a chat window, not a document.`
+Write in plain prose. No markdown — no asterisks, no dashes for bullet lists, no pound-sign headers. Use short paragraphs and line breaks for structure.`
 }
 
 type TaskInput = {
@@ -233,6 +259,15 @@ const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: 'get_saved_references',
+    description: 'Returns all saved references (vendors, brands, resources) for this property. Use when you need the full list with details mid-conversation.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: 'save_reference',
     description: 'Saves a trusted vendor, preferred brand, or useful resource to the property references list. Only call after explicit user approval.',
     input_schema: {
@@ -278,15 +313,17 @@ export async function POST(req: NextRequest) {
 
   const { messages } = await req.json()
 
-  // Inject current project and goal list into system prompt
-  const [{ data: projectData }, { data: goalData }] = await Promise.all([
+  // Inject current project, goal, and reference list into system prompt
+  const [{ data: projectData }, { data: goalData }, { data: refData }] = await Promise.all([
     supabase.from('projects').select('id, name, domain, status, priority, goal_id').eq('property_id', PROPERTY_ID).order('name'),
     supabase.from('goals').select('id, name, status').eq('property_id', PROPERTY_ID).order('name'),
+    supabase.from('saved_references').select('type, name, notes').eq('property_id', PROPERTY_ID).order('type').order('name'),
   ])
 
-  const projects = projectData ?? []
-  const goals    = goalData    ?? []
-  const systemPrompt = buildSystemPrompt(projects, goals)
+  const projects   = projectData ?? []
+  const goals      = goalData    ?? []
+  const references = refData     ?? []
+  const systemPrompt = buildSystemPrompt(projects, goals, references)
 
   let projectCreated: ProjectCreated | null = null
   const changes: ChangeResult[] = []
@@ -390,6 +427,22 @@ export async function POST(req: NextRequest) {
         } else {
           changes.push({ type: 'reference_saved', summary: `Saved ${data.type}: ${data.name}` })
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify({ success: true, id: data.id, name: data.name, type: data.type }) })
+        }
+      }
+
+      // ── get_saved_references ─────────────────────────────────────────
+      else if (block.name === 'get_saved_references') {
+        const { data: refs, error } = await supabase
+          .from('saved_references')
+          .select('id, type, name, notes, url, created_at')
+          .eq('property_id', PROPERTY_ID)
+          .order('type')
+          .order('name')
+
+        if (error) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error.message}`, is_error: true })
+        } else {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(refs) })
         }
       }
 
