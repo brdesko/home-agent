@@ -202,6 +202,16 @@ Suggested timing: introduce `goals` table in Phase 3 Slice 2 or 3, alongside
 the interactive completion work, so the Agent can reference goals when asking
 "how did it go?" follow-up questions.
 
+### Property Map view (Phase 4+)
+A visual tab showing a spatial representation of the 5.3-acre property —
+zones (barn area, garden, pasture, main house, pool, etc.) that can be
+clicked to drill into associated assets, projects, and completion status.
+
+Requires: property zones as a data concept (polygons or named areas linked
+to assets and projects), and a map/diagram UI (SVG-based custom diagram or
+a mapping library). Design when the data model is stable and the Goals +
+summary UI layers are in place.
+
 ---
 
 ## Open questions
