@@ -10,6 +10,7 @@
     "seed:property": "npx tsx --env-file=.env.local scripts/seed-property.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@base-ui/react": "^1.4.1",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.0",

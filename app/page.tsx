@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/sign-out-button'
+import Link from 'next/link'
 import { ProjectCard, type Project } from '@/components/notebook/project-card'
 import { TimelinePanel, type TimelineEvent } from '@/components/notebook/timeline-panel'
 import { BudgetPanel } from '@/components/notebook/budget-panel'
@@ -77,6 +78,9 @@ export default async function HomePage() {
           )}
         </div>
         <div className="flex items-center gap-4">
+          <Link href="/agent" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
+            Agent →
+          </Link>
           <span className="text-sm text-zinc-400">{user.email}</span>
           <SignOutButton />
         </div>
