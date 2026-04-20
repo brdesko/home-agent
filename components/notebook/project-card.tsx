@@ -56,7 +56,7 @@ export function ProjectCard({ project, isOwner }: { project: Project; isOwner: b
       {/* Tasks */}
       {project.tasks.length > 0 && (
         <div className="border-t border-zinc-100 pt-3">
-          <TaskList tasks={project.tasks} projectName={project.name} />
+          <TaskList tasks={project.tasks} projectName={project.name} projectId={project.id} />
         </div>
       )}
 

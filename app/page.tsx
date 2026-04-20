@@ -97,6 +97,9 @@ export default async function HomePage() {
           )}
         </div>
         <div className="flex items-center gap-4">
+          <Link href="/references" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
+            References →
+          </Link>
           <Link href="/agent" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
             Agent →
           </Link>

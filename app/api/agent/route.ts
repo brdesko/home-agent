@@ -24,7 +24,7 @@ function buildSystemPrompt(
 
   return `You are the Property Agent for 5090 Durham Rd, Pipersville PA — a 5.3-acre property managed by Brady and Erin.
 
-Your role is to help them manage their Property Notebook. You can add new projects, and modify existing ones — updating their details, adding tasks, or updating task status.
+Your role is to help them manage their Property Notebook. You can add new projects, and modify existing ones — updating their details, adding tasks, or updating task status. You can also save trusted vendors, preferred brands, and useful resources to their property References list.
 
 Current goals:
 ${goalList}
@@ -49,9 +49,18 @@ When modifying an existing project or task:
 3. Describe the change you're about to make and wait for a clear go-ahead.
 4. Call the appropriate update tool only after approval.
 
+When a message begins with task completion context ("I just completed..."):
+1. Immediately call get_all_tasks — no need to ask first, it's read-only. This gives you the full picture across every project.
+2. Review all projects. Think about what the outcome implies beyond just the originating project. Are tasks in other projects now unblocked or affected? Should anything be reprioritized? Is a new project warranted?
+3. Propose a specific, concrete set of changes — name each task or project and exactly what you'd change. If a new project makes sense, sketch it out.
+4. Wait for explicit approval before calling any update or create tools.
+5. Keep it tight — two or three well-reasoned suggestions beats a laundry list.
+
+When a contractor, service provider, brand, or resource comes up positively in conversation — especially after a task completion — offer to save it to References. Keep the offer brief: "Want me to save them as a trusted vendor?" If yes, call save_reference. Include any useful context in the notes field (what they did, why they were good, rough pricing, contact info if mentioned).
+
 Be direct, warm, and honest. Use good judgment — don't ask unnecessary questions. Never commit anything without a clear green light.
 
-You cannot yet respond proactively to disruptions or make multi-step cascading changes — that's coming soon. If asked, say so honestly.`
+Write in plain prose. No markdown — no asterisks, no dashes for bullet lists, no pound-sign headers. Use short paragraphs and line breaks for structure. The UI is a chat window, not a document.`
 }
 
 type TaskInput = {
@@ -106,6 +115,13 @@ type AddTaskInput = {
   title: string
   status?: string
   due_date?: string
+}
+
+type SaveReferenceInput = {
+  type: 'vendor' | 'brand' | 'resource'
+  name: string
+  notes?: string
+  url?: string
 }
 
 type ProjectCreated = {
@@ -214,6 +230,29 @@ const tools: Anthropic.Tool[] = [
         due_date: { type: 'string', description: 'ISO date YYYY-MM-DD, or null to clear' },
       },
       required: ['task_id'],
+    },
+  },
+  {
+    name: 'save_reference',
+    description: 'Saves a trusted vendor, preferred brand, or useful resource to the property references list. Only call after explicit user approval.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        type:  { type: 'string', enum: ['vendor', 'brand', 'resource'], description: 'vendor = contractor/service provider, brand = product brand, resource = link/guide/tool' },
+        name:  { type: 'string', description: 'Name of the vendor, brand, or resource' },
+        notes: { type: 'string', description: 'Why they are trusted, what they were used for, any contact info or details' },
+        url:   { type: 'string', description: 'Website or contact URL, optional' },
+      },
+      required: ['type', 'name'],
+    },
+  },
+  {
+    name: 'get_all_tasks',
+    description: 'Returns all tasks across every project for this property, grouped by project_id. Use this for a full Notebook assessment — e.g., after a task completion to find cascade implications across all projects.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: [],
     },
   },
   {
@@ -334,6 +373,44 @@ export async function POST(req: NextRequest) {
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error.message}`, is_error: true })
         } else {
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(tasks) })
+        }
+      }
+
+      // ── save_reference ───────────────────────────────────────────────
+      else if (block.name === 'save_reference') {
+        const input = block.input as SaveReferenceInput
+        const { data, error } = await supabase
+          .from('saved_references')
+          .insert({ property_id: PROPERTY_ID, type: input.type, name: input.name, notes: input.notes ?? null, url: input.url ?? null })
+          .select('id, name, type')
+          .single()
+
+        if (error || !data) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error?.message}`, is_error: true })
+        } else {
+          changes.push({ type: 'reference_saved', summary: `Saved ${data.type}: ${data.name}` })
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify({ success: true, id: data.id, name: data.name, type: data.type }) })
+        }
+      }
+
+      // ── get_all_tasks ────────────────────────────────────────────────
+      else if (block.name === 'get_all_tasks') {
+        const { data: allTasks, error } = await supabase
+          .from('tasks')
+          .select('id, title, status, due_date, project_id')
+          .eq('property_id', PROPERTY_ID)
+          .order('project_id')
+          .order('created_at')
+
+        if (error) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error.message}`, is_error: true })
+        } else {
+          const byProject: Record<string, typeof allTasks> = {}
+          for (const task of allTasks ?? []) {
+            byProject[task.project_id] ??= []
+            byProject[task.project_id].push(task)
+          }
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(byProject) })
         }
       }
 

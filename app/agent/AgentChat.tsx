@@ -35,6 +35,7 @@ export function AgentChat() {
   const [loading, setLoading] = useState(false)
   const [projectCreated, setProjectCreated] = useState<ProjectCreated | null>(null)
   const [changes, setChanges] = useState<ChangeResult[]>([])
+  const [cascadeLabel, setCascadeLabel] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const sentCtx   = useRef(false)
 
@@ -43,27 +44,34 @@ export function AgentChat() {
   }, [messages, loading])
 
   useEffect(() => {
-    const ctx = searchParams.get('ctx')
+    const ctx       = searchParams.get('ctx')
+    const taskTitle = searchParams.get('taskTitle')
     if (!ctx || sentCtx.current) return
     sentCtx.current = true
     router.replace('/agent')
+
+    if (taskTitle) setCascadeLabel(`Completed: ${taskTitle}`)
+
+    // Greeter is sent to API for context but not shown; only the response is rendered
+    const greeter: Message = { role: 'assistant', content: GREETER }
     const userMessage: Message = { role: 'user', content: ctx }
-    const next = [messages[0], userMessage]
-    setMessages(next)
+    const apiMessages = [greeter, userMessage]
+    setMessages([{ role: 'assistant', content: 'Looking across your projects…' }])
     setLoading(true)
+
     fetch('/api/agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: next }),
+      body: JSON.stringify({ messages: apiMessages }),
     })
       .then(r => r.json())
       .then(data => {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
+        setMessages([{ role: 'assistant', content: data.response }])
         if (data.projectCreated) setProjectCreated(data.projectCreated)
         if (data.changes?.length) setChanges(prev => [...prev, ...data.changes])
       })
       .catch(() => {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+        setMessages([{ role: 'assistant', content: 'Something went wrong. Please try again.' }])
       })
       .finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,17 +121,26 @@ export function AgentChat() {
           <p className="text-xs font-medium uppercase tracking-widest text-zinc-400">Property Agent</p>
           <h1 className="text-xl font-semibold text-zinc-900">5090 Durham Rd</h1>
         </div>
-        <Link
-          href="/"
-          className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
-        >
-          ← Notebook
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/references" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
+            References →
+          </Link>
+          <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
+            ← Notebook
+          </Link>
+        </div>
       </header>
 
       {/* Messages */}
       <main className="flex-1 overflow-y-auto px-6 py-8">
         <div className="max-w-2xl mx-auto space-y-6">
+          {cascadeLabel && (
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
+              <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest">{cascadeLabel}</p>
+            </div>
+          )}
+
           {messages.map((msg, i) => (
             <div
               key={i}

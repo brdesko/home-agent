@@ -40,7 +40,7 @@ function shortDate(iso: string): string {
   return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export function TaskList({ tasks, projectName }: { tasks: Task[]; projectName: string }) {
+export function TaskList({ tasks, projectName, projectId }: { tasks: Task[]; projectName: string; projectId: string }) {
   const [statuses, setStatuses] = useState<Record<string, string>>(
     Object.fromEntries(tasks.map(t => [t.id, t.status]))
   )
@@ -134,11 +134,13 @@ export function TaskList({ tasks, projectName }: { tasks: Task[]; projectName: s
     await new Promise(r => setTimeout(r, 200))
     const task = tasks.find(t => t.id === followUp.taskId)
     const ctx = [
-      `I just completed "${task?.title ?? followUp.taskId}" in the ${projectName} project.`,
+      `I just completed "${task?.title ?? followUp.taskId}" in the ${projectName} project (project_id: ${projectId}).`,
       `You asked: "${followUp.question}"`,
       `Here's what happened: ${followUpText.trim()}`,
+      `Please review all projects and tasks across the full Notebook and suggest any cascade changes — or a new project if warranted — given this outcome.`,
     ].join(' ')
-    setAgentUrl(`/agent?ctx=${encodeURIComponent(ctx)}`)
+    const title = task?.title ?? ''
+    setAgentUrl(`/agent?ctx=${encodeURIComponent(ctx)}&taskTitle=${encodeURIComponent(title)}`)
     setNoted(true)
     setNoting(false)
   }
