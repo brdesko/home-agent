@@ -16,7 +16,12 @@ type ProjectCreated = {
   eventCount: number
 }
 
-const GREETER = "What would you like to add to your Notebook today? I can add a new project — just describe what you have in mind and we'll work through the details together."
+type ChangeResult = {
+  type: string
+  summary: string
+}
+
+const GREETER = "What would you like to do with your Notebook today? I can add a new project, or update an existing one — status, tasks, priority, whatever needs changing."
 
 export function AgentChat() {
   const [messages, setMessages] = useState<Message[]>([
@@ -25,6 +30,7 @@ export function AgentChat() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [projectCreated, setProjectCreated] = useState<ProjectCreated | null>(null)
+  const [changes, setChanges] = useState<ChangeResult[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -52,6 +58,7 @@ export function AgentChat() {
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
       if (data.projectCreated) setProjectCreated(data.projectCreated)
+      if (data.changes?.length) setChanges(prev => [...prev, ...data.changes])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
     } finally {
@@ -107,6 +114,18 @@ export function AgentChat() {
               <div className="bg-zinc-100 rounded-2xl rounded-bl-sm px-4 py-3">
                 <span className="text-zinc-400 text-sm">Thinking…</span>
               </div>
+            </div>
+          )}
+
+          {changes.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-blue-800 font-medium">Notebook updated.</p>
+                <p className="text-xs text-blue-700 mt-0.5">{changes.map(c => c.summary).join(' · ')}</p>
+              </div>
+              <Link href="/" className="text-sm text-blue-700 underline underline-offset-2 hover:text-blue-900 shrink-0">
+                View Notebook →
+              </Link>
             </div>
           )}
 

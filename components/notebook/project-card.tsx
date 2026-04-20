@@ -1,9 +1,4 @@
-type Task = {
-  id: string
-  title: string
-  status: string
-  due_date: string | null
-}
+import { TaskList, type Task } from './task-list'
 
 type BudgetLine = {
   id: string
@@ -35,28 +30,7 @@ const PRIORITY_DOT: Record<string, string> = {
   low:    'bg-zinc-300',
 }
 
-const TASK_STYLES: Record<string, string> = {
-  todo:        'text-zinc-500',
-  in_progress: 'text-blue-600',
-  done:        'text-zinc-400 line-through',
-  blocked:     'text-red-500',
-}
-
-const TASK_LABELS: Record<string, string> = {
-  todo:        'to do',
-  in_progress: 'in progress',
-  done:        'done',
-  blocked:     'blocked',
-}
-
-function shortDate(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
 export function ProjectCard({ project, isOwner }: { project: Project; isOwner: boolean }) {
-  const activeTasks = project.tasks.filter(t => t.status !== 'done')
-  const doneCount   = project.tasks.filter(t => t.status === 'done').length
-
   const estimated = project.budget_lines
     .filter(b => b.line_type === 'estimated')
     .reduce((sum, b) => sum + b.amount, 0)
@@ -81,25 +55,9 @@ export function ProjectCard({ project, isOwner }: { project: Project; isOwner: b
 
       {/* Tasks */}
       {project.tasks.length > 0 && (
-        <ul className="space-y-1.5 border-t border-zinc-100 pt-3">
-          {activeTasks.map(task => (
-            <li key={task.id} className="flex items-baseline justify-between gap-3 text-sm">
-              <span className={`flex-1 min-w-0 ${TASK_STYLES[task.status] ?? 'text-zinc-500'}`}>
-                {task.title}
-              </span>
-              <span className="text-xs text-zinc-400 shrink-0 flex items-center gap-1">
-                {task.due_date && <span>{shortDate(task.due_date)}</span>}
-                {task.due_date && <span className="text-zinc-300">·</span>}
-                <span>{TASK_LABELS[task.status] ?? task.status}</span>
-              </span>
-            </li>
-          ))}
-          {doneCount > 0 && (
-            <li className="text-xs text-zinc-400 pt-0.5">
-              {doneCount} task{doneCount !== 1 ? 's' : ''} done
-            </li>
-          )}
-        </ul>
+        <div className="border-t border-zinc-100 pt-3">
+          <TaskList tasks={project.tasks} />
+        </div>
       )}
 
       {/* Budget total */}

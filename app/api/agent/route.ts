@@ -6,31 +6,39 @@ const anthropic = new Anthropic()
 
 const PROPERTY_ID = 'a1b2c3d4-0000-0000-0000-000000000001'
 
-const SYSTEM_PROMPT = `You are the Property Agent for 5090 Durham Rd, Pipersville PA — a 5.3-acre property managed by Brady and Erin.
+function buildSystemPrompt(projects: { id: string; name: string; domain: string; status: string; priority: string }[]) {
+  const projectList = projects.length > 0
+    ? projects.map(p => `- ${p.name} (id: ${p.id}, domain: ${p.domain}, status: ${p.status}, priority: ${p.priority})`).join('\n')
+    : '(no projects yet)'
 
-Your role is to help them manage their Property Notebook. You can add new projects to the Notebook, including their initial tasks, estimated budget lines, and key timeline events.
+  return `You are the Property Agent for 5090 Durham Rd, Pipersville PA — a 5.3-acre property managed by Brady and Erin.
 
-A project has:
-- name: a short, clear title
-- domain: 'farm', 'renovation', 'grounds', 'maintenance', 'home-systems', or a new domain if none of those fit
-- status: 'planned' (default for new projects), 'active', or 'on_hold'
-- priority: 'low', 'medium', or 'high'
-- description: a clear paragraph describing scope and purpose
+Your role is to help them manage their Property Notebook. You can add new projects, and modify existing ones — updating their details, adding tasks, or updating task status.
 
-Along with each project, you can also create:
-- tasks: initial to-do items. Use your judgment to propose reasonable starting tasks based on the project type — don't ask the user to enumerate every task. A handful of good starting tasks is better than an exhaustive list.
-- budget_lines: estimated costs broken down by category. Ask about budget if it's likely to be significant. Skip if the project is clearly exploratory or cost is unknown.
-- timeline_events: key dates or milestones. Ask about any target dates or deadlines that matter.
+Current projects in the Notebook:
+${projectList}
 
-When someone asks you to add a project:
-1. Ask a few focused clarifying questions — priority, rough scope, any known budget or key dates. Keep it conversational, not a form. One or two questions at a time.
-2. Once you have enough, draft a complete proposal: project details, initial tasks (your judgment), budget lines if applicable, and timeline events if there are meaningful dates.
-3. Present the full proposal clearly — the user should be able to read it and say yes or make adjustments.
-4. Only call create_project after explicit approval (e.g. "yes", "go ahead", "looks good").
+Use the project IDs above when calling update_project, get_project_tasks, or add_task.
 
-Be direct, warm, and honest. This is a personal tool — use good judgment and don't ask unnecessary questions. But never commit without a clear green light.
+A project has: name, domain ('farm', 'renovation', 'grounds', 'maintenance', 'home-systems', or new), status ('planned', 'active', 'on_hold', 'complete'), priority ('low', 'medium', 'high'), and description.
 
-You cannot modify existing projects, tasks, or budget lines yet. If asked, say so honestly and note it's coming soon.`
+A task has: title, status ('todo', 'in_progress', 'done', 'blocked'), and optional due_date (YYYY-MM-DD).
+
+When adding a new project:
+1. Ask focused clarifying questions — priority, scope, known budget, key dates.
+2. Propose a complete package (project + initial tasks + budget lines if relevant + timeline events).
+3. Wait for explicit approval before calling create_project.
+
+When modifying an existing project or task:
+1. Confirm you understand which project or task they mean.
+2. If you need to see the current tasks, call get_project_tasks first.
+3. Describe the change you're about to make and wait for a clear go-ahead.
+4. Call the appropriate update tool only after approval.
+
+Be direct, warm, and honest. Use good judgment — don't ask unnecessary questions. Never commit anything without a clear green light.
+
+You cannot yet respond proactively to disruptions or make multi-step cascading changes — that's coming soon. If asked, say so honestly.`
+}
 
 type TaskInput = {
   title: string
@@ -62,6 +70,29 @@ type CreateProjectInput = {
   timeline_events?: TimelineEventInput[]
 }
 
+type UpdateProjectInput = {
+  project_id: string
+  name?: string
+  domain?: string
+  status?: string
+  priority?: string
+  description?: string
+}
+
+type UpdateTaskInput = {
+  task_id: string
+  title?: string
+  status?: string
+  due_date?: string | null
+}
+
+type AddTaskInput = {
+  project_id: string
+  title: string
+  status?: string
+  due_date?: string
+}
+
 type ProjectCreated = {
   id: string
   name: string
@@ -70,60 +101,117 @@ type ProjectCreated = {
   eventCount: number
 }
 
+type ChangeResult = {
+  type: 'project_created' | 'project_updated' | 'task_updated' | 'task_added'
+  summary: string
+}
+
 const tools: Anthropic.Tool[] = [
   {
     name: 'create_project',
-    description: 'Creates a new project in the Property Notebook, with optional initial tasks, budget lines, and timeline events. Only call this after the user has explicitly approved the proposal.',
+    description: 'Creates a new project with optional initial tasks, budget lines, and timeline events. Only call after explicit user approval.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        name:        { type: 'string', description: 'Project name' },
-        domain:      { type: 'string', description: "Domain: 'farm', 'renovation', 'grounds', 'maintenance', 'home-systems', or a new domain" },
-        status:      { type: 'string', enum: ['planned', 'active', 'on_hold'], description: "Use 'planned' for new projects unless told otherwise" },
+        name:        { type: 'string' },
+        domain:      { type: 'string' },
+        status:      { type: 'string', enum: ['planned', 'active', 'on_hold'] },
         priority:    { type: 'string', enum: ['low', 'medium', 'high'] },
-        description: { type: 'string', description: 'Clear description of project scope and purpose' },
+        description: { type: 'string' },
         tasks: {
           type: 'array',
-          description: 'Initial tasks for the project. Use judgment — propose a good starting set, not an exhaustive list.',
           items: {
             type: 'object',
             properties: {
               title:    { type: 'string' },
               status:   { type: 'string', enum: ['todo', 'in_progress', 'blocked'] },
-              due_date: { type: 'string', description: 'ISO date YYYY-MM-DD, optional' },
+              due_date: { type: 'string' },
             },
             required: ['title'],
           },
         },
         budget_lines: {
           type: 'array',
-          description: 'Estimated costs, broken down by category. Omit if costs are unknown or project is exploratory.',
           items: {
             type: 'object',
             properties: {
               description: { type: 'string' },
-              amount:      { type: 'number', description: 'Amount in USD' },
-              line_type:   { type: 'string', enum: ['estimated', 'actual'], description: "Use 'estimated' for new projects" },
-              category:    { type: 'string', description: 'e.g. construction, equipment, materials, labor' },
+              amount:      { type: 'number' },
+              line_type:   { type: 'string', enum: ['estimated', 'actual'] },
+              category:    { type: 'string' },
             },
             required: ['description', 'amount'],
           },
         },
         timeline_events: {
           type: 'array',
-          description: 'Key dates or milestones for the project.',
           items: {
             type: 'object',
             properties: {
               title:       { type: 'string' },
               description: { type: 'string' },
-              event_date:  { type: 'string', description: 'ISO date YYYY-MM-DD' },
+              event_date:  { type: 'string' },
             },
             required: ['title', 'event_date'],
           },
         },
       },
       required: ['name', 'domain', 'status', 'priority'],
+    },
+  },
+  {
+    name: 'get_project_tasks',
+    description: 'Returns the current tasks for a project. Call this before updating tasks so you know the task IDs.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        project_id: { type: 'string', description: 'The project ID' },
+      },
+      required: ['project_id'],
+    },
+  },
+  {
+    name: 'update_project',
+    description: 'Updates fields on an existing project. Only call after explicit user approval.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        project_id:  { type: 'string' },
+        name:        { type: 'string' },
+        domain:      { type: 'string' },
+        status:      { type: 'string', enum: ['planned', 'active', 'on_hold', 'complete'] },
+        priority:    { type: 'string', enum: ['low', 'medium', 'high'] },
+        description: { type: 'string' },
+      },
+      required: ['project_id'],
+    },
+  },
+  {
+    name: 'update_task',
+    description: 'Updates fields on an existing task. Call get_project_tasks first to get task IDs. Only call after explicit user approval.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        task_id:  { type: 'string' },
+        title:    { type: 'string' },
+        status:   { type: 'string', enum: ['todo', 'in_progress', 'done', 'blocked'] },
+        due_date: { type: 'string', description: 'ISO date YYYY-MM-DD, or null to clear' },
+      },
+      required: ['task_id'],
+    },
+  },
+  {
+    name: 'add_task',
+    description: 'Adds a new task to an existing project. Only call after explicit user approval.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        project_id: { type: 'string' },
+        title:      { type: 'string' },
+        status:     { type: 'string', enum: ['todo', 'in_progress', 'blocked'] },
+        due_date:   { type: 'string', description: 'ISO date YYYY-MM-DD, optional' },
+      },
+      required: ['project_id', 'title'],
     },
   },
 ]
@@ -135,18 +223,29 @@ export async function POST(req: NextRequest) {
 
   const { messages } = await req.json()
 
+  // Inject current project list into system prompt
+  const { data: projectData } = await supabase
+    .from('projects')
+    .select('id, name, domain, status, priority')
+    .eq('property_id', PROPERTY_ID)
+    .order('name')
+
+  const projects = projectData ?? []
+  const systemPrompt = buildSystemPrompt(projects)
+
   let projectCreated: ProjectCreated | null = null
+  const changes: ChangeResult[] = []
+
   let currentMessages: Anthropic.MessageParam[] = messages.map((m: { role: string; content: string }) => ({
     role: m.role as 'user' | 'assistant',
     content: m.content,
   }))
 
-  // Agent loop — continues until Claude produces a final text response (cap at 10 iterations)
   for (let i = 0; i < 10; i++) {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
-      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
       messages: currentMessages,
       tools,
     })
@@ -156,7 +255,7 @@ export async function POST(req: NextRequest) {
         .filter((b): b is Anthropic.TextBlock => b.type === 'text')
         .map(b => b.text)
         .join('')
-      return NextResponse.json({ response: text, projectCreated })
+      return NextResponse.json({ response: text, projectCreated, changes })
     }
 
     if (response.stop_reason !== 'tool_use') break
@@ -166,83 +265,125 @@ export async function POST(req: NextRequest) {
     for (const block of response.content) {
       if (block.type !== 'tool_use') continue
 
+      // ── create_project ──────────────────────────────────────────────
       if (block.name === 'create_project') {
         const input = block.input as CreateProjectInput
 
-        // Insert project
         const { data: project, error: projectError } = await supabase
           .from('projects')
-          .insert({
-            property_id: PROPERTY_ID,
-            name:        input.name,
-            domain:      input.domain,
-            status:      input.status,
-            priority:    input.priority,
-            description: input.description ?? null,
-          })
+          .insert({ property_id: PROPERTY_ID, name: input.name, domain: input.domain, status: input.status, priority: input.priority, description: input.description ?? null })
           .select('id, name')
           .single()
 
         if (projectError || !project) {
-          toolResults.push({
-            type:        'tool_result',
-            tool_use_id: block.id,
-            content:     `Error creating project: ${projectError?.message}`,
-            is_error:    true,
-          })
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${projectError?.message}`, is_error: true })
           continue
         }
 
-        let taskCount = 0
-        let budgetTotal = 0
-        let eventCount = 0
+        let taskCount = 0, budgetTotal = 0, eventCount = 0
 
-        // Insert tasks
-        if (input.tasks && input.tasks.length > 0) {
-          const taskRows = input.tasks.map(t => ({
-            property_id: PROPERTY_ID,
-            project_id:  project.id,
-            title:       t.title,
-            status:      t.status ?? 'todo',
-            due_date:    t.due_date ?? null,
-          }))
-          const { error } = await supabase.from('tasks').insert(taskRows)
-          if (!error) taskCount = taskRows.length
+        if (input.tasks?.length) {
+          const { error } = await supabase.from('tasks').insert(
+            input.tasks.map(t => ({ property_id: PROPERTY_ID, project_id: project.id, title: t.title, status: t.status ?? 'todo', due_date: t.due_date ?? null }))
+          )
+          if (!error) taskCount = input.tasks.length
         }
-
-        // Insert budget lines
-        if (input.budget_lines && input.budget_lines.length > 0) {
-          const budgetRows = input.budget_lines.map(b => ({
-            property_id: PROPERTY_ID,
-            project_id:  project.id,
-            description: b.description,
-            amount:      b.amount,
-            line_type:   b.line_type ?? 'estimated',
-            category:    b.category ?? null,
-          }))
-          const { error } = await supabase.from('budget_lines').insert(budgetRows)
-          if (!error) budgetTotal = input.budget_lines.reduce((sum, b) => sum + b.amount, 0)
+        if (input.budget_lines?.length) {
+          const { error } = await supabase.from('budget_lines').insert(
+            input.budget_lines.map(b => ({ property_id: PROPERTY_ID, project_id: project.id, description: b.description, amount: b.amount, line_type: b.line_type ?? 'estimated', category: b.category ?? null }))
+          )
+          if (!error) budgetTotal = input.budget_lines.reduce((s, b) => s + b.amount, 0)
         }
-
-        // Insert timeline events
-        if (input.timeline_events && input.timeline_events.length > 0) {
-          const eventRows = input.timeline_events.map(e => ({
-            property_id: PROPERTY_ID,
-            project_id:  project.id,
-            title:       e.title,
-            description: e.description ?? null,
-            event_date:  e.event_date,
-          }))
-          const { error } = await supabase.from('timeline_events').insert(eventRows)
-          if (!error) eventCount = eventRows.length
+        if (input.timeline_events?.length) {
+          const { error } = await supabase.from('timeline_events').insert(
+            input.timeline_events.map(e => ({ property_id: PROPERTY_ID, project_id: project.id, title: e.title, description: e.description ?? null, event_date: e.event_date }))
+          )
+          if (!error) eventCount = input.timeline_events.length
         }
 
         projectCreated = { id: project.id, name: project.name, taskCount, budgetTotal, eventCount }
-        toolResults.push({
-          type:        'tool_result',
-          tool_use_id: block.id,
-          content:     JSON.stringify({ success: true, ...projectCreated }),
-        })
+        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify({ success: true, ...projectCreated }) })
+      }
+
+      // ── get_project_tasks ────────────────────────────────────────────
+      else if (block.name === 'get_project_tasks') {
+        const { project_id } = block.input as { project_id: string }
+        const { data: tasks, error } = await supabase
+          .from('tasks')
+          .select('id, title, status, due_date')
+          .eq('project_id', project_id)
+          .order('created_at')
+
+        if (error) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error.message}`, is_error: true })
+        } else {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(tasks) })
+        }
+      }
+
+      // ── update_project ───────────────────────────────────────────────
+      else if (block.name === 'update_project') {
+        const { project_id, ...fields } = block.input as UpdateProjectInput
+        const updates: Record<string, unknown> = {}
+        if (fields.name        !== undefined) updates.name        = fields.name
+        if (fields.domain      !== undefined) updates.domain      = fields.domain
+        if (fields.status      !== undefined) updates.status      = fields.status
+        if (fields.priority    !== undefined) updates.priority    = fields.priority
+        if (fields.description !== undefined) updates.description = fields.description
+
+        const { data, error } = await supabase
+          .from('projects')
+          .update(updates)
+          .eq('id', project_id)
+          .select('id, name')
+          .single()
+
+        if (error || !data) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error?.message}`, is_error: true })
+        } else {
+          changes.push({ type: 'project_updated', summary: `Updated project: ${data.name}` })
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify({ success: true, id: data.id, name: data.name }) })
+        }
+      }
+
+      // ── update_task ──────────────────────────────────────────────────
+      else if (block.name === 'update_task') {
+        const { task_id, ...fields } = block.input as UpdateTaskInput
+        const updates: Record<string, unknown> = {}
+        if (fields.title    !== undefined) updates.title    = fields.title
+        if (fields.status   !== undefined) updates.status   = fields.status
+        if (fields.due_date !== undefined) updates.due_date = fields.due_date
+
+        const { data, error } = await supabase
+          .from('tasks')
+          .update(updates)
+          .eq('id', task_id)
+          .select('id, title')
+          .single()
+
+        if (error || !data) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error?.message}`, is_error: true })
+        } else {
+          changes.push({ type: 'task_updated', summary: `Updated task: ${data.title}` })
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify({ success: true, id: data.id, title: data.title }) })
+        }
+      }
+
+      // ── add_task ─────────────────────────────────────────────────────
+      else if (block.name === 'add_task') {
+        const input = block.input as AddTaskInput
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert({ property_id: PROPERTY_ID, project_id: input.project_id, title: input.title, status: input.status ?? 'todo', due_date: input.due_date ?? null })
+          .select('id, title')
+          .single()
+
+        if (error || !data) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error?.message}`, is_error: true })
+        } else {
+          changes.push({ type: 'task_added', summary: `Added task: ${data.title}` })
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify({ success: true, id: data.id, title: data.title }) })
+        }
       }
     }
 
@@ -253,5 +394,5 @@ export async function POST(req: NextRequest) {
     ]
   }
 
-  return NextResponse.json({ response: 'Something went wrong. Please try again.', projectCreated: null })
+  return NextResponse.json({ response: 'Something went wrong. Please try again.', projectCreated: null, changes: [] })
 }
