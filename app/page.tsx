@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ProjectCard, type Project } from '@/components/notebook/project-card'
 import { TimelinePanel, type TimelineEvent } from '@/components/notebook/timeline-panel'
 import { BudgetPanel } from '@/components/notebook/budget-panel'
+import { AutoRefresh } from '@/components/notebook/auto-refresh'
 
 const DOMAIN_LABELS: Record<string, string> = {
   renovation:    'Renovation',
@@ -69,6 +70,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <AutoRefresh />
       <header className="border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-widest text-zinc-400">Property Notebook</p>
