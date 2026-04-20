@@ -11,6 +11,9 @@ type Message = {
 type ProjectCreated = {
   id: string
   name: string
+  taskCount: number
+  budgetTotal: number
+  eventCount: number
 }
 
 const GREETER = "What would you like to add to your Notebook today? I can add a new project — just describe what you have in mind and we'll work through the details together."
@@ -108,13 +111,20 @@ export function AgentChat() {
           )}
 
           {projectCreated && (
-            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center justify-between">
-              <p className="text-sm text-green-800 font-medium">
-                "{projectCreated.name}" added to your Notebook.
-              </p>
+            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-green-800 font-medium">"{projectCreated.name}" added.</p>
+                <p className="text-xs text-green-700 mt-0.5">
+                  {[
+                    projectCreated.taskCount > 0 && `${projectCreated.taskCount} task${projectCreated.taskCount !== 1 ? 's' : ''}`,
+                    projectCreated.budgetTotal > 0 && `$${projectCreated.budgetTotal.toLocaleString()} estimated`,
+                    projectCreated.eventCount > 0 && `${projectCreated.eventCount} timeline event${projectCreated.eventCount !== 1 ? 's' : ''}`,
+                  ].filter(Boolean).join(' · ')}
+                </p>
+              </div>
               <Link
                 href="/"
-                className="text-sm text-green-700 underline underline-offset-2 hover:text-green-900 shrink-0 ml-4"
+                className="text-sm text-green-700 underline underline-offset-2 hover:text-green-900 shrink-0"
               >
                 View Notebook →
               </Link>
