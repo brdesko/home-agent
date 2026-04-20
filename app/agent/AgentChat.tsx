@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 type Message = {
@@ -24,6 +25,9 @@ type ChangeResult = {
 const GREETER = "What would you like to do with your Notebook today? I can add a new project, or update an existing one — status, tasks, priority, whatever needs changing."
 
 export function AgentChat() {
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: GREETER },
   ])
@@ -32,10 +36,38 @@ export function AgentChat() {
   const [projectCreated, setProjectCreated] = useState<ProjectCreated | null>(null)
   const [changes, setChanges] = useState<ChangeResult[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
+  const sentCtx   = useRef(false)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  useEffect(() => {
+    const ctx = searchParams.get('ctx')
+    if (!ctx || sentCtx.current) return
+    sentCtx.current = true
+    router.replace('/agent')
+    const userMessage: Message = { role: 'user', content: ctx }
+    const next = [messages[0], userMessage]
+    setMessages(next)
+    setLoading(true)
+    fetch('/api/agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: next }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
+        if (data.projectCreated) setProjectCreated(data.projectCreated)
+        if (data.changes?.length) setChanges(prev => [...prev, ...data.changes])
+      })
+      .catch(() => {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+      })
+      .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function send() {
     const text = input.trim()
