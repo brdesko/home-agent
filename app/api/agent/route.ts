@@ -6,19 +6,33 @@ const anthropic = new Anthropic()
 
 const PROPERTY_ID = 'a1b2c3d4-0000-0000-0000-000000000001'
 
-function buildSystemPrompt(projects: { id: string; name: string; domain: string; status: string; priority: string }[]) {
+function buildSystemPrompt(
+  projects: { id: string; name: string; domain: string; status: string; priority: string; goal_id: string | null }[],
+  goals: { id: string; name: string; status: string }[]
+) {
+  const goalList = goals.length > 0
+    ? goals.map(g => `- ${g.name} (id: ${g.id}, status: ${g.status})`).join('\n')
+    : '(no goals yet)'
+
   const projectList = projects.length > 0
-    ? projects.map(p => `- ${p.name} (id: ${p.id}, domain: ${p.domain}, status: ${p.status}, priority: ${p.priority})`).join('\n')
+    ? projects.map(p => {
+        const goal = goals.find(g => g.id === p.goal_id)
+        const goalLabel = goal ? `, goal: ${goal.name}` : ''
+        return `- ${p.name} (id: ${p.id}, domain: ${p.domain}, status: ${p.status}, priority: ${p.priority}${goalLabel})`
+      }).join('\n')
     : '(no projects yet)'
 
   return `You are the Property Agent for 5090 Durham Rd, Pipersville PA — a 5.3-acre property managed by Brady and Erin.
 
 Your role is to help them manage their Property Notebook. You can add new projects, and modify existing ones — updating their details, adding tasks, or updating task status.
 
+Current goals:
+${goalList}
+
 Current projects in the Notebook:
 ${projectList}
 
-Use the project IDs above when calling update_project, get_project_tasks, or add_task.
+Use the project and goal IDs above when calling tools. When proposing or modifying projects, reference the relevant goal if one applies — it helps Brady and Erin see how individual projects connect to their bigger picture.
 
 A project has: name, domain ('farm', 'renovation', 'grounds', 'maintenance', 'home-systems', or new), status ('planned', 'active', 'on_hold', 'complete'), priority ('low', 'medium', 'high'), and description.
 
@@ -77,6 +91,7 @@ type UpdateProjectInput = {
   status?: string
   priority?: string
   description?: string
+  goal_id?: string
 }
 
 type UpdateTaskInput = {
@@ -182,6 +197,7 @@ const tools: Anthropic.Tool[] = [
         status:      { type: 'string', enum: ['planned', 'active', 'on_hold', 'complete'] },
         priority:    { type: 'string', enum: ['low', 'medium', 'high'] },
         description: { type: 'string' },
+        goal_id:     { type: 'string', description: 'Assign to a goal by ID, or omit to leave unchanged' },
       },
       required: ['project_id'],
     },
@@ -223,15 +239,15 @@ export async function POST(req: NextRequest) {
 
   const { messages } = await req.json()
 
-  // Inject current project list into system prompt
-  const { data: projectData } = await supabase
-    .from('projects')
-    .select('id, name, domain, status, priority')
-    .eq('property_id', PROPERTY_ID)
-    .order('name')
+  // Inject current project and goal list into system prompt
+  const [{ data: projectData }, { data: goalData }] = await Promise.all([
+    supabase.from('projects').select('id, name, domain, status, priority, goal_id').eq('property_id', PROPERTY_ID).order('name'),
+    supabase.from('goals').select('id, name, status').eq('property_id', PROPERTY_ID).order('name'),
+  ])
 
   const projects = projectData ?? []
-  const systemPrompt = buildSystemPrompt(projects)
+  const goals    = goalData    ?? []
+  const systemPrompt = buildSystemPrompt(projects, goals)
 
   let projectCreated: ProjectCreated | null = null
   const changes: ChangeResult[] = []
@@ -330,6 +346,7 @@ export async function POST(req: NextRequest) {
         if (fields.status      !== undefined) updates.status      = fields.status
         if (fields.priority    !== undefined) updates.priority    = fields.priority
         if (fields.description !== undefined) updates.description = fields.description
+        if (fields.goal_id     !== undefined) updates.goal_id     = fields.goal_id
 
         const { data, error } = await supabase
           .from('projects')

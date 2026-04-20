@@ -54,6 +54,17 @@ async function upsert(table: string, rows: object[], context: string) {
 async function main() {
   console.log(`\nSeeding property: ${propertyId}\n`)
 
+  // Goals (must come before projects so goal_id FKs resolve)
+  const goals = (seed.goals ?? []).map((g: any) => ({
+    id:          g.id,
+    property_id: propertyId,
+    name:        g.name,
+    description: g.description ?? null,
+    status:      g.status,
+    priority:    g.priority,
+  }))
+  await upsert('goals', goals, 'goals')
+
   // Assets
   const assets = seed.assets.map((a: any) => ({
     id:          a.id,
@@ -74,6 +85,7 @@ async function main() {
       status:      project.status,
       priority:    project.priority,
       description: project.description ?? null,
+      goal_id:     project.goal_id ?? null,
     }
     await upsert('projects', [projectRow], `project: ${project.name}`)
 

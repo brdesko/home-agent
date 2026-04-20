@@ -6,6 +6,44 @@
     "erin":  "d3ead3ef-3af4-46c9-8c48-0b5dab3ed21e"
   },
 
+  "goals": [
+    {
+      "id":          "aa0e8400-e29b-41d4-a716-446655440001",
+      "name":        "Fully Renovated & Furnished Home",
+      "description": "Every room in the main house painted, lit, and furnished to a finished standard. Kitchen renovated. Guest spaces complete.",
+      "status":      "active",
+      "priority":    "high"
+    },
+    {
+      "id":          "aa0e8400-e29b-41d4-a716-446655440002",
+      "name":        "Working Farm",
+      "description": "A productive small farm operation — laying hens, a planned sheep flock, and a meaningful kitchen garden producing real food each season.",
+      "status":      "active",
+      "priority":    "high"
+    },
+    {
+      "id":          "aa0e8400-e29b-41d4-a716-446655440003",
+      "name":        "Maintained & Beautiful Grounds",
+      "description": "Lawn, pond, and surrounding grounds kept in good order — mowed, sprayed, and clear of hazards. Firewood stocked. Property sign and exterior lighting in place.",
+      "status":      "active",
+      "priority":    "medium"
+    },
+    {
+      "id":          "aa0e8400-e29b-41d4-a716-446655440004",
+      "name":        "Pool & Outdoor Living",
+      "description": "Pool converted to saltwater, fully operational, and ready for summer use. Outdoor living areas functional and inviting.",
+      "status":      "active",
+      "priority":    "medium"
+    },
+    {
+      "id":          "aa0e8400-e29b-41d4-a716-446655440005",
+      "name":        "Smart & Secure Home",
+      "description": "Full home automation via Homey — lighting, security cameras, motion sensors, and arrival/departure automations all configured and documented.",
+      "status":      "active",
+      "priority":    "medium"
+    }
+  ],
+
   "assets": [
     {
       "id":          "550e8400-e29b-41d4-a716-446655440001",
@@ -64,6 +102,7 @@
       "domain":      "renovation",
       "status":      "active",
       "priority":    "high",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440001",
       "description": "Painting, lighting, and furnishing across all main house rooms. Significant progress made — master bedroom, laundry, living room, guest bath, office, and hallway painted and lit. New couch installed. Remaining: furniture sourcing, room punch lists, exterminator.",
       "tasks": [
         {
@@ -136,6 +175,7 @@
       "domain":      "renovation",
       "status":      "planned",
       "priority":    "high",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440001",
       "description": "Full kitchen renovation. Scope and budget TBD — needs definition before contractor engagement.",
       "tasks": [
         {
@@ -173,6 +213,7 @@
       "domain":      "renovation",
       "status":      "planned",
       "priority":    "medium",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440001",
       "description": "Finish the guest areas — floor refinishing and furniture. Scope to be defined.",
       "tasks": [
         {
@@ -208,6 +249,7 @@
       "domain":      "grounds",
       "status":      "active",
       "priority":    "high",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440003",
       "description": "Restoring the main house lawn and surrounding grounds from overgrown to managed. Multiple spray rounds done; mower in use but needs repair; dead trees in progress; broader zoning under review.",
       "tasks": [
         {
@@ -262,6 +304,7 @@
       "domain":      "maintenance",
       "status":      "planned",
       "priority":    "medium",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440003",
       "description": "Pond and fountain are operational but degraded. Needs pump assessment, liner check, and cosmetic cleanup.",
       "tasks": [
         {
@@ -297,6 +340,7 @@
       "domain":      "maintenance",
       "status":      "active",
       "priority":    "high",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440004",
       "description": "Assessment scheduled. Goal: saltwater conversion, any structural or equipment repairs, and full commissioning for summer.",
       "tasks": [
         {
@@ -359,6 +403,7 @@
       "domain":      "farm",
       "status":      "planned",
       "priority":    "medium",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440002",
       "description": "Establish a laying flock. Indoor coops exist in Main Barn; outdoor run needs to be built. Start with a small flock of laying hens.",
       "tasks": [
         {
@@ -436,6 +481,7 @@
       "domain":      "farm",
       "status":      "planned",
       "priority":    "low",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440002",
       "description": "Long-term goal: a small sheep flock on the back field. No commitment yet — this phase is about understanding requirements and planning infrastructure.",
       "tasks": [
         {
@@ -468,6 +514,7 @@
       "domain":      "farm",
       "status":      "active",
       "priority":    "high",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440002",
       "description": "First significant garden plot at 5090 Durham Rd. Significant but manageable — enough to grow real food this season without overcommitting. Location under review.",
       "tasks": [
         {
@@ -544,6 +591,7 @@
       "domain":      "home-systems",
       "status":      "active",
       "priority":    "medium",
+      "goal_id":     "aa0e8400-e29b-41d4-a716-446655440005",
       "description": "WiFi 7 mesh live throughout house and barns. Motion sensors and cameras installed. Homey hub in place but not fully configured. Lighting automations, arrival/departure triggers, and full system documentation still needed.",
       "tasks": [
         {

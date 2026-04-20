@@ -6,12 +6,13 @@ import { ProjectCard, type Project } from '@/components/notebook/project-card'
 import { TimelinePanel, type TimelineEvent } from '@/components/notebook/timeline-panel'
 import { BudgetPanel } from '@/components/notebook/budget-panel'
 import { AutoRefresh } from '@/components/notebook/auto-refresh'
+import { GoalsPanel, type Goal } from '@/components/notebook/goals-panel'
 
 const DOMAIN_LABELS: Record<string, string> = {
-  renovation:    'Renovation',
-  farm:          'Farm',
-  grounds:       'Grounds',
-  maintenance:   'Maintenance',
+  renovation:     'Renovation',
+  farm:           'Farm',
+  grounds:        'Grounds',
+  maintenance:    'Maintenance',
   'home-systems': 'Home Systems',
 }
 
@@ -31,13 +32,13 @@ export default async function HomePage() {
 
   if (!memberships || memberships.length === 0) redirect('/login')
 
-  const membership  = memberships[0]
-  const property    = membership.properties as unknown as { id: string; name: string; address: string | null }
-  const isOwner     = membership.role === 'owner'
-  const propertyId  = property.id
-  const today       = new Date().toISOString().split('T')[0]
+  const membership = memberships[0]
+  const property   = membership.properties as unknown as { id: string; name: string; address: string | null }
+  const isOwner    = membership.role === 'owner'
+  const propertyId = property.id
+  const today      = new Date().toISOString().split('T')[0]
 
-  const [projectsResult, eventsResult] = await Promise.all([
+  const [projectsResult, eventsResult, goalsResult] = await Promise.all([
     supabase
       .from('projects')
       .select('*, tasks(*), budget_lines(*)')
@@ -50,10 +51,25 @@ export default async function HomePage() {
       .gte('event_date', today)
       .order('event_date')
       .limit(8),
+    supabase
+      .from('goals')
+      .select('*')
+      .eq('property_id', propertyId)
+      .order('priority', { ascending: false })
+      .order('name'),
   ])
 
-  const projects = (projectsResult.data ?? []) as Project[]
-  const events   = (eventsResult.data ?? []) as TimelineEvent[]
+  const projects = (projectsResult.data ?? []) as (Project & { goal_id: string | null })[]
+  const events   = (eventsResult.data  ?? []) as TimelineEvent[]
+  const goals    = (goalsResult.data   ?? []) as Goal[]
+
+  // Attach project progress counts to each goal
+  const goalsWithProgress = goals.map(goal => ({
+    ...goal,
+    totalProjects:    projects.filter(p => p.goal_id === goal.id).length,
+    activeProjects:   projects.filter(p => p.goal_id === goal.id && p.status === 'active').length,
+    completeProjects: projects.filter(p => p.goal_id === goal.id && p.status === 'complete').length,
+  }))
 
   // Group projects by domain, respecting preferred order
   const grouped: Record<string, Project[]> = {}
@@ -71,6 +87,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <AutoRefresh />
+
       <header className="border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-widest text-zinc-400">Property Notebook</p>
@@ -87,6 +104,8 @@ export default async function HomePage() {
           <SignOutButton />
         </div>
       </header>
+
+      <GoalsPanel goals={goalsWithProgress} />
 
       <div className="max-w-6xl mx-auto px-6 py-8 flex gap-10">
         {/* Projects */}
