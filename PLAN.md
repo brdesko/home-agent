@@ -57,7 +57,22 @@ Property's budget and timeline.
 Agent gains broader capabilities: modify existing projects, respond to
 disruptions, suggest proactively, track assets with predictable maintenance.
 
-Exit criteria defined when we get there.
+Planned slices:
+- **Slice 1:** Tasks interactive in Notebook UI (click to complete/change
+  status). Agent can modify existing projects and tasks via conversation.
+- **Slice 2:** Interactive task completion — completing a decision-point task
+  surfaces an Agent prompt ("How did it go?"). Proves the trigger mechanism.
+- **Slice 3:** Cascade logic — Agent reads full project context after a
+  completion prompt and proposes changes to dependent tasks (add, modify,
+  reprioritize). Commits on approval. The kitchen-quote scenario.
+- **Slice 4:** Pattern-aware suggestions — Agent reads project/task history
+  to infer household preferences (e.g. DIY vs. purchased) and surfaces
+  relevant suggestions when proposing tasks. No separate storage needed;
+  Claude reasons from context. Example: "You've handled all yardwork DIY so
+  far — want to take the same approach here, or bring someone in?"
+
+Exit criteria: Agent can respond to a real disruption (e.g. quote comes in
+over budget) and produce a revised plan the owners accept.
 
 ## Stack
 
