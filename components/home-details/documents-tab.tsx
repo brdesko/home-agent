@@ -40,6 +40,7 @@ export function DocumentsTab({ initial, isOwner }: Props) {
   const [parseUrl,    setParseUrl]    = useState('')
   const [pasteText,   setPasteText]   = useState('')
   const [parsing,     setParsing]     = useState<string | null>(null) // path, 'url', or 'text'
+  const [parseErr,    setParseErr]    = useState<string | null>(null)
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -71,30 +72,42 @@ export function DocumentsTab({ initial, isOwner }: Props) {
   }
 
   async function parseDoc(path: string) {
-    setParsing(path); setParseResult(null)
-    const res = await fetch('/api/agent/parse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source: 'document', path }),
-    })
-    const data = await res.json()
-    setParsing(null)
-    if (res.ok) setParseResult(data as ParseResult)
+    setParsing(path); setParseResult(null); setParseErr(null)
+    try {
+      const res = await fetch('/api/agent/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'document', path }),
+      })
+      const data = await res.json().catch(() => ({ error: 'The server did not respond — the PDF may be too large or took too long to process. Try a smaller file.' }))
+      setParsing(null)
+      if (!res.ok || data.error) { setParseErr(data.error ?? 'Parse failed'); return }
+      setParseResult(data as ParseResult)
+    } catch (e) {
+      setParsing(null)
+      setParseErr(`Parse failed: ${String(e)}`)
+    }
   }
 
   async function parseFromExternal() {
     const key  = parseMode === 'url' ? 'url' : 'text'
     const val  = parseMode === 'url' ? parseUrl.trim() : pasteText.trim()
     if (!val) return
-    setParsing(parseMode)
-    const res = await fetch('/api/agent/parse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source: parseMode, [key]: val }),
-    })
-    const data = await res.json()
-    setParsing(null)
-    if (res.ok) setParseResult(data as ParseResult)
+    setParsing(parseMode); setParseErr(null)
+    try {
+      const res = await fetch('/api/agent/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: parseMode, [key]: val }),
+      })
+      const data = await res.json().catch(() => ({ error: 'The server did not respond — please try again.' }))
+      setParsing(null)
+      if (!res.ok || data.error) { setParseErr(data.error ?? 'Parse failed'); return }
+      setParseResult(data as ParseResult)
+    } catch (e) {
+      setParsing(null)
+      setParseErr(`Parse failed: ${String(e)}`)
+    }
   }
 
   return (
@@ -143,6 +156,9 @@ export function DocumentsTab({ initial, isOwner }: Props) {
                           className="text-xs px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors disabled:opacity-40">
                           {parsing === doc.path ? 'Parsing…' : 'Parse with Agent'}
                         </button>
+                        {parsing === doc.path && parseErr && (
+                          <p className="text-xs text-red-500 mt-1">{parseErr}</p>
+                        )}
                         <button
                           onClick={() => deleteDoc(doc.name)}
                           disabled={deleting === doc.name}
@@ -156,6 +172,11 @@ export function DocumentsTab({ initial, isOwner }: Props) {
               </li>
             ))}
           </ul>
+        )}
+
+        {/* Parse error */}
+        {parseErr && !parseResult && (
+          <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{parseErr}</p>
         )}
 
         {/* Parse from URL or pasted text */}
@@ -177,7 +198,7 @@ export function DocumentsTab({ initial, isOwner }: Props) {
 
             {parseMode === 'url' ? (
               <div className="space-y-1.5">
-                <p className="text-xs text-zinc-400">Zillow and Redfin block automated access — use "Paste text" instead for those.</p>
+                <p className="text-xs text-zinc-400">Paste any property listing URL, including Zillow and Redfin.</p>
                 <div className="flex gap-2">
                   <input value={parseUrl} onChange={e => setParseUrl(e.target.value)}
                     placeholder="https://…"
