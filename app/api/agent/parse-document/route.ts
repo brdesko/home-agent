@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { extractText } from 'unpdf'
 
 // Node.js runtime — gives us pdf-parse and avoids the 30s Edge ceiling.
 // Text extraction is milliseconds; Anthropic text-only calls complete in ~5–8s.
@@ -85,9 +84,11 @@ export async function POST(req: NextRequest) {
     // Convert to Uint8Array once — avoid creating multiple views of the same ArrayBuffer
     const uint8 = new Uint8Array(await blob.arrayBuffer())
 
-    // Extract text from PDF. Falls back to empty for image-only (scanned) PDFs.
+    // Dynamic import so any load failure is caught by our try/catch and returned
+    // as JSON rather than crashing the module and producing an HTML error page.
     let docText = ''
     try {
+      const { extractText } = await import('unpdf')
       const { text } = await extractText(uint8, { mergePages: true })
       docText = text.trim()
     } catch (e) {
