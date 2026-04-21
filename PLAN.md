@@ -1,6 +1,6 @@
 # Home Management Platform — Plan
 
-Living document. Updated as we learn. Last touched: 2026-04-20.
+Living document. Updated as we learn. Last touched: 2026-04-21.
 
 ---
 
@@ -23,66 +23,165 @@ Initial deployment is a single household (user + Erin at 5090 Durham Rd), but
 the architecture is multi-tenant from day one. See `CLAUDE.md` for the two
 governing architectural principles.
 
+---
+
 ## Phased roadmap
 
-### Phase 4 — Aesthetics, Maneuverability & Access (active)
+### Phase 5 — New User Access & Onboarding (planned — after Phase 6)
 
-Polish the product for real daily use: UI feel, navigation, creating new
-content from the UI directly, and extending access to Erin.
+Enable a real second user to receive an invite, create an account with
+credentials, log in to an empty property, and be guided through setup by the
+Agent — with no manual intervention from the owner.
 
-**Themes:**
+**Exit criteria (hard):** Two successful end-to-end tests:
+1. Erin uses the shared account at a known URL, logs in, and can view and
+   interact with the existing property.
+2. A second independent tester (friend or parent) receives an invite, creates
+   their own account, logs into a blank notebook, and uses the Agent to create
+   their first property and at least one project.
 
-**1. UI aesthetics and polish**
-- Consistent typographic hierarchy and spacing
-- Color and tone aligned with "editorial and warm, not generic SaaS"
-- Mobile-responsive layouts (currently desktop-first)
-- Empty states, loading states, error states that feel considered
+**Slices:**
 
-**2. Maneuverability**
-- Create new projects directly from Project Management UI (not agent-only)
-- Create new tasks directly from project slide-over
-- Quick-add ongoing tasks from To-Do tab
-- Keyboard shortcuts for common actions
-- Deep links / URL state for tabs so browser back works correctly
+**5-A: Invite flow**
+- Owner can generate an invite link from within the app (or a simple admin
+  page) that creates a Supabase auth invitation email
+- Invited user clicks link → lands on an account-creation page (set password)
+- On first login, user is a member of no properties
 
-**3. New project from scratch practice**
-- Use the full product to add a real new project end-to-end
-- Identify friction points and fix them
-- Validate the Agent's create/modify flow against a live project
+**5-B: Blank-state onboarding**
+- When a user has no active properties, the Agent greets them with a guided
+  onboarding flow: name your property, provide an address or Zillow/Redfin URL,
+  set a first goal
+- Agent creates the property record, sets the cookie, and redirects to the
+  Notebook — no manual DB work required
 
-**4. Extending access**
-- Confirm Erin's account is set up and has Owner access
-- Verify RLS enforcement (a second browser session sees the same data)
-- Plan Viewer access pattern for parents (read-only, no budget)
+**5-C: Erin test**
+- Walk Erin through the existing login at the Vercel URL
+- Confirm she can view the property, interact with tasks, and use the Agent
+- Fix any friction discovered
 
-**5. Overnight QA & improvement agent**
-An autonomous agent that runs while you sleep, acts as a QA engineer and
-product reviewer, and leaves a morning report. Two outputs:
-- **QA report** — `QA_REPORTS/YYYY-MM-DD.md`: broken flows, type errors,
-  edge cases, RLS gaps, API error handling gaps, UI inconsistencies found
-- **Improvement log** — suggested fixes and enhancements ranked by impact,
-  written as actionable change descriptions
-- **Optional v2 branch** — agent applies straightforward fixes to a git
-  worktree and opens a draft PR; user reviews and merges or discards
+**5-D: Independent tester test**
+- Invite a friend or parent via the new invite flow
+- Observe or debrief — note every point of confusion
+- Fix blocking issues before Phase 8
 
-Implementation approach:
-- Claude Code CLI running in non-interactive mode via a script or Windows
-  Task Scheduler job
-- Uses worktree isolation so in-progress fixes don't touch the working tree
-- Report and branch link left for morning review
-- Scope of each run configurable (QA-only vs. QA + fixes)
+---
 
-This replaces the manual reviewer subagent planned in CLAUDE.md and extends
-it to run autonomously rather than on-demand.
+### Phase 6 — Interactivity & Visual Layer (active)
 
-**Parking lot (known deferred items):**
-- Firecrawl URL crawling — proper JS-rendered scraping for Zillow/Redfin
-  with screenshot support. Needs `FIRECRAWL_API_KEY` from firecrawl.dev.
-- Hardcoded `PROPERTY_ID` — must become a per-user lookup before
-  multi-property or sharing features ship
-- Visual/zones — satellite + floor plan property map, zone-to-asset linking
-- Onboarding wizard — new user links a Zillow/Redfin URL, agent parses it
-  and asks for a first goal
+Make the Notebook more dynamic and visually rich.
+
+**Slices:**
+
+**6-A: Drag-and-drop scheduling**
+- Projects can be dragged between quarters on the Budget or Timeline tab
+- Dragging updates the project's target quarter (new field or existing)
+- Optionally: dragging a project onto the Calendar view creates or updates
+  a CalendarEvent for that project's date range
+
+**6-B: Visual tab**
+- Property map view: satellite image or uploaded floor plan as backdrop
+- Zones / areas annotated on the map (garden, barn, driveway, etc.)
+- Assets and projects linkable to a zone
+- Clicking a zone shows linked projects and assets
+
+**6-C: Parsing improvements**
+- Improve Agent's Zillow/Redfin parsing (consider Firecrawl integration if
+  the manual-paste fallback remains too rough)
+- Better extraction of year built, sq footage, lot size from listing text
+- Confidence scoring: Agent flags fields it isn't sure about before writing
+
+---
+
+### Phase 7 — Agent Evolution & Autonomous QA
+
+Elevate the Agent from a reactive tool to an ongoing product intelligence layer,
+and establish a real automated QA cadence.
+
+**Slices:**
+
+**7-A: PM Agent**
+- A persistent "Product Manager" agent that knows the project's goals,
+  architectural principles (from CLAUDE.md), and current roadmap (from PLAN.md)
+- Runs on demand or on a schedule; reads recent session notes and QA reports
+- Produces a prioritized improvement log with specific, actionable suggestions
+- Can optionally open GitHub issues for flagged items
+
+**7-B: QA Agent (automated)**
+- Implemented as a **GitHub Actions scheduled workflow** (not a Claude Code
+  session cron — see decision log) running nightly or on push to main
+- Checks: TypeScript build clean, RLS policy gaps, broken API routes, UI
+  flow smoke tests, property-scoping correctness
+- Output: `QA_REPORTS/YYYY-MM-DD.md` committed to the repo (or as a PR
+  artifact), flagging any regressions
+- PM Agent reads QA reports as part of its context
+
+**7-C: Goals and evolution principles**
+- Define the evolution charter for the PM Agent: what this product should
+  and should not become, quality bar, aesthetic direction, non-negotiables
+- Stored as a document the PM Agent reads on every run
+- First draft written collaboratively in session, then owned by the user
+
+---
+
+### Phase 8 — Polish, Final QA & Sustainability
+
+Bring the product to a state that is pleasant to hand to a new user and
+sustainable to maintain long-term with minimal session overhead.
+
+**Slices:**
+
+**8-A: Pizazz & usability pass**
+- Final round of UI polish: spacing, transitions, empty states, loading states
+- Maneuverability improvements: keyboard shortcuts, tab URL state (browser
+  back works), deep links to specific projects
+- Any remaining rough edges surfaced during Phases 5-7 testing
+
+**8-B: Final QA run**
+- Full QA Agent run against the production deployment
+- PM Agent produces a final improvement log
+- Any blocking issues fixed before distribution
+
+**8-C: Tester distribution**
+- Invite one friend or parent (independent of the Erin test) to use the app
+  for a real project on their own property
+- Observe or debrief — document friction
+- Decide what (if anything) to fix before calling it stable
+
+**8-D: Sustainability mode**
+- Define what "maintenance" looks like: how often to run a QA pass, how to
+  handle Supabase/Vercel/Anthropic API changes, how to onboard future testers
+- Archive completed phases in this document, keep roadmap current
+- Hand off to PM Agent as the ongoing steward of the improvement backlog
+
+---
+
+### Phase 4 — Aesthetics, Maneuverability & Access ✓ Complete
+
+Polished the product for real daily use, extended access, and deployed to Vercel.
+
+**Built:**
+- Redesigned login page: split-screen brand panel with topographic SVG,
+  "Parcel" wordmark in Playfair Display, warm-white form panel
+- Property archive and switch: archive button (owner-only, only when >1
+  property), cookie-based property switching, archived recovery UI
+- Notebook header redesigned: property name, active project count, open tasks,
+  current quarter + budgeted amount
+- AutoRefresh on window focus (keeps Notebook current without manual reload)
+- Calendar tab with CalendarEvent CRUD
+- Purchases tab with Purchase CRUD
+- Ongoing tasks / To-Do tab restructure (Suggested / Ongoing / Project badges)
+- Agent: parse_listing, update_property_details, create_asset tools
+- Agent: onboarding system prompt rewrite (directive about Zillow/Redfin parsing)
+- Agent: parse API (sub-call to Haiku for structured extraction)
+- Property scoping fixed on all server pages (home-details, references,
+  purchases all now respect the cookie-selected property)
+- Layout: archived properties filtered from property switcher
+- Budget line fields unified (estimated_amount, actual_amount)
+- Weather integration in Suggestions (OpenWeatherMap 5-day forecast)
+- Multiple TypeScript build errors resolved; clean build on Vercel
+
+**Migrations shipped:** 022–025 (approx)
 
 ---
 
@@ -91,26 +190,18 @@ it to run autonomously rather than on-demand.
 Agent gained broader capabilities and the Notebook became fully interactive.
 
 **Built:**
-- Interactive task status cycling in the Notebook UI (click to advance)
+- Interactive task status cycling in the Notebook UI
 - Agent can modify existing projects, tasks, goals, and budgets
-- Goals layer with named goals, priority hierarchy (drag to reorder), rank badges
-- Budget model unified (estimated + actual per line item; target_budget on projects and goals)
-- Parent project relationships (design budget flows into renovation estimate)
+- Goals layer with named goals, priority hierarchy, rank badges
+- Budget model unified (estimated + actual per line item)
+- Parent project relationships
 - Project archive view (Active / Completed / Cancelled tabs)
-- Historical project entry form ("Add past project")
-- To-Do restructure: unified timeline list (This Week / Rest of Quarter),
-  three category badges (Suggested / Ongoing / Project), task expansion with
-  Go to project, Add cost line, Ask Agent actions; category filter; progress bars
-- Ongoing tasks table (recurring seasonal tasks, separate from project tasks)
-- Home Details page (/home-details) with four tabs:
-  - Details — editable property fields (acreage, year built, sq footage, heating, well/septic)
-  - Documents — Supabase Storage file management with signed URLs
-  - Assets — full CRUD (make, model, serial, install date, last serviced, location)
-  - Photos — stub (deferred)
-- Agent document parsing — upload a PDF or paste text → agent extracts
-  property details, assets, and suggested projects with tasks → confirmation
-  modal with per-item checkboxes before any writes
-- Suggestions API enhanced with property details + asset inventory context
+- Historical project entry form
+- To-Do restructure: unified timeline list with category badges and filters
+- Ongoing tasks table
+- Home Details page with Details, Documents, Assets, Photos tabs
+- Agent document parsing with confirmation modal
+- Suggestions API with property details + asset inventory context
 
 **Migrations shipped:** 011–021
 
@@ -118,8 +209,7 @@ Agent gained broader capabilities and the Notebook became fully interactive.
 
 ### Phase 2 — The First Agent Workflow ✓ Complete
 
-Agent with add-project capability, including tasks, budget lines, and
-timeline events. Deployed to Vercel.
+Agent with add-project capability. Deployed to Vercel.
 
 ---
 
@@ -157,11 +247,11 @@ Basic Notebook UI. Hand-seeded farm plan. Auth via magic link.
 - **QuarterlyBudget** — year, quarter, allocated, notes (owner-only)
 - **OngoingTask** — title, description, recurrence, active_months[]
 - **SavedReference** — title, url, notes
-- **CalendarEvent** — title, start_date, end_date, type (vacation/holiday/busy/sale_window/other), notes
-- **Purchase** — item_name, vendor, price, purchased_at, project_id (nullable), category, notes
+- **CalendarEvent** — title, start_date, end_date, type, notes
+- **Purchase** — item_name, vendor, price, purchased_at, project_id, category, notes
 
 ### Storage
-- **Home Agent** bucket — documents at `{property_id}/{filename}`, signed URLs for access
+- **Home Agent** bucket — documents at `{property_id}/{filename}`, signed URLs
 
 ## Decisions log
 
@@ -175,7 +265,12 @@ Basic Notebook UI. Hand-seeded farm plan. Auth via magic link.
 - **2026-04-20:** Staged subagent adoption — single agent through Phase 3,
   revisit in Phase 4.
 - **2026-04-20:** Budget lines unified to single rows with estimated_amount
-  and actual_amount (replacing separate estimated/actual row types).
+  and actual_amount.
 - **2026-04-20:** Document parsing uses Claude's native PDF/image reading +
-  a paste-text fallback for JS-rendered sites (Zillow/Redfin block scraping).
-  Firecrawl parked for later.
+  a paste-text fallback. Firecrawl parked for later.
+- **2026-04-21:** Product name finalized as "Parcel."
+- **2026-04-21:** Automated QA to be implemented as GitHub Actions scheduled
+  workflow, not Claude Code session cron — session crons are lost when context
+  limit is hit, even if terminal stays open.
+- **2026-04-21:** PM Agent and QA Agent scoped to Phase 7; evolution charter
+  to be written collaboratively and stored as a document the PM Agent reads.

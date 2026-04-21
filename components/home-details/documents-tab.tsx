@@ -218,6 +218,9 @@ export function DocumentsTab({ initial, isOwner }: Props) {
         {/* Parse from URL or pasted text */}
         {isOwner && (
           <section className="space-y-3 border-t border-zinc-100 pt-6">
+            <p className="text-xs text-zinc-500 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              Parsing uses AI to extract property details, assets, and suggested projects from documents and listings. It is one of the most useful features in Parcel — and may take 1–2 minutes for large files. Please be patient while it works.
+            </p>
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Parse with Agent</h2>
               <div className="flex gap-1 text-xs">

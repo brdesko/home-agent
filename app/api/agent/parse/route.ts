@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchWithFirecrawl } from '@/lib/firecrawl'
@@ -110,7 +109,6 @@ export async function POST(req: NextRequest) {
   }
 
   const encoder = new TextEncoder()
-  const anthropic = new Anthropic()
 
   // Stream the response — heartbeat newlines keep the Vercel Edge connection alive
   // while Anthropic processes the document. Final JSON is the last line.
@@ -169,13 +167,54 @@ export async function POST(req: NextRequest) {
           return
         }
 
-        // Stream from Anthropic — each delta event triggers a heartbeat to keep the connection alive
-        const stream = anthropic.messages.stream({ model: 'claude-sonnet-4-6', max_tokens: 4096, messages })
-        for await (const event of stream) {
-          if (event.type === 'content_block_delta') hb()
+        // Use raw fetch + SSE parsing — the Anthropic SDK uses Node.js internals that
+        // fail silently in Edge runtime, producing empty text and "No structured data found"
+        const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': process.env.ANTHROPIC_API_KEY!,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 8192, stream: true, messages }),
+          signal: AbortSignal.timeout(28000),
+        })
+
+        if (!apiRes.ok) {
+          const errText = await apiRes.text()
+          fail(`Anthropic API error ${apiRes.status}: ${errText.slice(0, 300)}`)
+          return
         }
-        const final = await stream.finalMessage()
-        const raw = final.content.filter((b): b is Anthropic.TextBlock => b.type === 'text').map(b => b.text).join('')
+
+        let raw = ''
+        const reader = apiRes.body!.getReader()
+        const decoder = new TextDecoder()
+        let sseBuffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          sseBuffer += decoder.decode(value, { stream: true })
+          const lines = sseBuffer.split('\n')
+          sseBuffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6).trim()
+            if (data === '[DONE]') continue
+            try {
+              const evt = JSON.parse(data) as { type: string; delta?: { type: string; text?: string } }
+              if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta' && evt.delta.text) {
+                raw += evt.delta.text
+                hb()
+              }
+            } catch { /* skip malformed SSE lines */ }
+          }
+        }
+
+        if (!raw) {
+          fail('No response text from Anthropic — the document may be too large, have too many pages, or contain only images. Try a smaller file or use the Paste text option instead.')
+          return
+        }
         end(extractJson(raw))
 
       } catch (e) {
