@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchWithFirecrawl } from '@/lib/firecrawl'
 
-export const maxDuration = 60
+export const runtime = 'edge'
+export const maxDuration = 30
 
 const BUCKET = 'Home Agent'
 
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
         // Text files: download and send as plain text
         const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(path)
         if (dlErr || !blob) return NextResponse.json({ error: dlErr?.message ?? 'Download failed' }, { status: 500 })
-        const textContent = Buffer.from(await blob.arrayBuffer()).toString('utf-8').slice(0, 60000)
+        const textContent = new TextDecoder().decode(await blob.arrayBuffer()).slice(0, 60000)
         const msg = await anthropic.messages.create({
           model: 'claude-sonnet-4-6',
           max_tokens: 4096,
