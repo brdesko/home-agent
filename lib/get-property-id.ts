@@ -8,26 +8,38 @@ export async function getPropertyId(supabase: SupabaseClient, userId: string): P
   const cookiePropertyId = cookieStore.get('parcel_property_id')?.value
 
   if (cookiePropertyId) {
-    const { data } = await supabase
+    const { data: membership } = await supabase
       .from('property_members')
-      .select('property_id, properties(is_archived)')
+      .select('property_id')
       .eq('property_id', cookiePropertyId)
       .eq('user_id', userId)
       .single()
-    const archived = (data?.properties as unknown as { is_archived: boolean } | null)?.is_archived
-    if (data?.property_id && !archived) return data.property_id
+
+    if (membership?.property_id) {
+      const { data: prop } = await supabase
+        .from('properties')
+        .select('is_archived')
+        .eq('id', cookiePropertyId)
+        .single()
+      if (!prop?.is_archived) return cookiePropertyId
+    }
   }
 
-  // Fallback: first non-archived property
-  const { data } = await supabase
+  // Fallback: first non-archived property this user is a member of
+  const { data: memberships } = await supabase
     .from('property_members')
-    .select('property_id, properties(is_archived)')
+    .select('property_id')
     .eq('user_id', userId)
     .order('created_at')
 
-  const active = (data ?? []).find(m => {
-    const p = m.properties as unknown as { is_archived: boolean } | null
-    return !p?.is_archived
-  })
-  return active?.property_id ?? null
+  for (const m of memberships ?? []) {
+    const { data: prop } = await supabase
+      .from('properties')
+      .select('is_archived')
+      .eq('id', m.property_id)
+      .single()
+    if (!prop?.is_archived) return m.property_id
+  }
+
+  return null
 }
