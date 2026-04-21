@@ -1,9 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-// Node.js runtime — gives us pdf-parse and avoids the 30s Edge ceiling.
-// Text extraction is milliseconds; Anthropic text-only calls complete in ~5–8s.
-export const maxDuration = 60
+export const maxDuration = 10
 
 const BUCKET = 'Home Agent'
 

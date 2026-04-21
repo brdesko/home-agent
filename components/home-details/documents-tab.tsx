@@ -107,8 +107,15 @@ export function DocumentsTab({ initial, isOwner }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path }),
       })
-      const data = await res.json() as { error?: string }
+      const raw = await res.text()
       setParsing(null)
+      let data: { error?: string }
+      try {
+        data = JSON.parse(raw) as { error?: string }
+      } catch {
+        setParseErr(`Server error: ${raw.slice(0, 300)}`)
+        return
+      }
       if (!res.ok || data.error) { setParseErr(data.error ?? 'Parse failed'); return }
       setParseResult(data as ParseResult)
     } catch (e) {
