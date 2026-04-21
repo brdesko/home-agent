@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     type: 'invite',
     email,
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm`,
       data: { property_id: PROPERTY_ID, role },
     },
   })
