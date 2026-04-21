@@ -32,6 +32,23 @@ function formatSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+// Reads a streaming parse response — heartbeat newlines keep the connection alive,
+// final line is the JSON result.
+async function readParseStream(res: Response): Promise<unknown> {
+  if (!res.body) throw new Error('No response body')
+  const reader  = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+  }
+  const lines = buffer.split('\n').map(l => l.trim()).filter(Boolean)
+  if (!lines.length) throw new Error('Empty response from server')
+  return JSON.parse(lines[lines.length - 1])
+}
+
 export function DocumentsTab({ initial, isOwner }: Props) {
   const [docs,        setDocs]        = useState<Doc[]>(initial)
   const [uploading,   setUploading]   = useState(false)
@@ -90,9 +107,13 @@ export function DocumentsTab({ initial, isOwner }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: 'document', path }),
       })
-      const data = await res.json().catch(() => ({ error: 'The server did not respond — the PDF may be too large or took too long to process. Try a smaller file.' }))
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setParseErr((err as { error?: string }).error ?? 'Parse failed'); setParsing(null); return
+      }
+      const data = await readParseStream(res) as { error?: string }
       setParsing(null)
-      if (!res.ok || data.error) { setParseErr(data.error ?? 'Parse failed'); return }
+      if (data.error) { setParseErr(data.error); return }
       setParseResult(data as ParseResult)
     } catch (e) {
       setParsing(null)
@@ -101,8 +122,8 @@ export function DocumentsTab({ initial, isOwner }: Props) {
   }
 
   async function parseFromExternal() {
-    const key  = parseMode === 'url' ? 'url' : 'text'
-    const val  = parseMode === 'url' ? parseUrl.trim() : pasteText.trim()
+    const key = parseMode === 'url' ? 'url' : 'text'
+    const val = parseMode === 'url' ? parseUrl.trim() : pasteText.trim()
     if (!val) return
     setParsing(parseMode); setParseErr(null)
     try {
@@ -111,9 +132,13 @@ export function DocumentsTab({ initial, isOwner }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: parseMode, [key]: val }),
       })
-      const data = await res.json().catch(() => ({ error: 'The server did not respond — please try again.' }))
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setParseErr((err as { error?: string }).error ?? 'Parse failed'); setParsing(null); return
+      }
+      const data = await readParseStream(res) as { error?: string }
       setParsing(null)
-      if (!res.ok || data.error) { setParseErr(data.error ?? 'Parse failed'); return }
+      if (data.error) { setParseErr(data.error); return }
       setParseResult(data as ParseResult)
     } catch (e) {
       setParsing(null)

@@ -7,7 +7,6 @@ export const runtime = 'edge'
 export const maxDuration = 30
 
 const BUCKET = 'Home Agent'
-
 const ZILLOW_REDFIN = /zillow\.com|redfin\.com/i
 
 const PARSE_PROMPT = `You are a property intelligence assistant. Extract structured information from the provided document or webpage.
@@ -89,107 +88,89 @@ function stripHtml(html: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Auth and validation happen before streaming starts
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await req.json()
-    const { source, path, url, text } = body as { source: 'document' | 'url' | 'text'; path?: string; url?: string; text?: string }
-
-    const anthropic = new Anthropic()
-    let parseResult: unknown
-
-    if (source === 'document' && path) {
-      const fileName = path.split('/').pop() ?? ''
-      const category = getMimeCategory(fileName)
-
-      if (category === 'text') {
-        // Text files: download and send as plain text
-        const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(path)
-        if (dlErr || !blob) return NextResponse.json({ error: dlErr?.message ?? 'Download failed' }, { status: 500 })
-        const textContent = new TextDecoder().decode(await blob.arrayBuffer()).slice(0, 60000)
-        const msg = await anthropic.messages.create({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 4096,
-          messages: [{ role: 'user', content: `Document content:\n\n${textContent}\n\n${PARSE_PROMPT}` }],
-        })
-        const raw = msg.content.filter((b): b is Anthropic.TextBlock => b.type === 'text').map(b => b.text).join('')
-        parseResult = extractJson(raw)
-        return NextResponse.json(parseResult)
-      }
-
-      // PDFs and images: generate a short-lived signed URL and let Anthropic fetch directly.
-      // This avoids downloading+base64-encoding in our function, which was causing timeouts.
-      const { data: signedData, error: signErr } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(path, 300) // 5-minute URL, enough for Anthropic to fetch
-
-      if (signErr || !signedData?.signedUrl) {
-        return NextResponse.json({ error: signErr?.message ?? 'Could not generate signed URL' }, { status: 500 })
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contentBlock: any = category === 'pdf'
-        ? { type: 'document', source: { type: 'url', url: signedData.signedUrl } }
-        : { type: 'image',    source: { type: 'url', url: signedData.signedUrl } }
-
-      const msg = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: PARSE_PROMPT }] }],
-      })
-      const raw = msg.content.filter((b): b is Anthropic.TextBlock => b.type === 'text').map(b => b.text).join('')
-      parseResult = extractJson(raw)
-
-    } else if (source === 'url' && url) {
-      let pageText = ''
-
-      // Try Firecrawl first for JS-rendered sites (including Zillow/Redfin)
-      const firecrawlText = await fetchWithFirecrawl(url)
-      if (firecrawlText) {
-        pageText = firecrawlText.slice(0, 60000)
-      } else if (ZILLOW_REDFIN.test(url)) {
-        return NextResponse.json({
-          error: 'Zillow and Redfin block automated access. Switch to "Paste text" mode: open the listing, press Ctrl+A then Ctrl+C, and paste the text here.'
-        }, { status: 422 })
-      } else {
-        try {
-          const res = await fetch(url, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HomeAgent/1.0)' },
-            signal: AbortSignal.timeout(15000),
-          })
-          const html = await res.text()
-          pageText = stripHtml(html)
-        } catch (e) {
-          return NextResponse.json({ error: `Could not fetch URL: ${String(e)}` }, { status: 422 })
-        }
-      }
-
-      const msg = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: `Webpage content from ${url}:\n\n${pageText}\n\n${PARSE_PROMPT}` }],
-      })
-      const raw = msg.content.filter((b): b is Anthropic.TextBlock => b.type === 'text').map(b => b.text).join('')
-      parseResult = extractJson(raw)
-
-    } else if (source === 'text' && text) {
-      const msg = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: `Property listing text:\n\n${text.slice(0, 60000)}\n\n${PARSE_PROMPT}` }],
-      })
-      const raw = msg.content.filter((b): b is Anthropic.TextBlock => b.type === 'text').map(b => b.text).join('')
-      parseResult = extractJson(raw)
-
-    } else {
-      return NextResponse.json({ error: 'source must be "document" (with path), "url" (with url), or "text" (with text)' }, { status: 400 })
-    }
-
-    return NextResponse.json(parseResult)
-  } catch (err) {
-    console.error('[parse] unhandled error:', err)
-    return NextResponse.json({ error: `Parse failed: ${String(err)}` }, { status: 500 })
+  const body = await req.json()
+  const { source, path, url, text } = body as {
+    source: 'document' | 'url' | 'text'
+    path?: string; url?: string; text?: string
   }
+
+  const encoder = new TextEncoder()
+  const anthropic = new Anthropic()
+
+  // Stream the response — heartbeat newlines keep the Vercel Edge connection alive
+  // while Anthropic processes the document. Final JSON is the last line.
+  const readable = new ReadableStream({
+    async start(controller) {
+      const hb   = () => controller.enqueue(encoder.encode('\n'))
+      const end  = (result: unknown) => { controller.enqueue(encoder.encode(JSON.stringify(result) + '\n')); controller.close() }
+      const fail = (msg: string)     => { controller.enqueue(encoder.encode(JSON.stringify({ error: msg }) + '\n')); controller.close() }
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let messages: any[]
+
+        if (source === 'document' && path) {
+          const fileName = path.split('/').pop() ?? ''
+          const category = getMimeCategory(fileName)
+
+          if (category === 'text') {
+            const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(path)
+            if (dlErr || !blob) { fail(dlErr?.message ?? 'Download failed'); return }
+            const content = new TextDecoder().decode(await blob.arrayBuffer()).slice(0, 60000)
+            messages = [{ role: 'user', content: `Document content:\n\n${content}\n\n${PARSE_PROMPT}` }]
+          } else {
+            const { data: signedData, error: signErr } = await supabase.storage
+              .from(BUCKET).createSignedUrl(path, 300)
+            if (signErr || !signedData?.signedUrl) { fail(signErr?.message ?? 'Could not generate signed URL'); return }
+            const contentBlock = category === 'pdf'
+              ? { type: 'document', source: { type: 'url', url: signedData.signedUrl } }
+              : { type: 'image',    source: { type: 'url', url: signedData.signedUrl } }
+            messages = [{ role: 'user', content: [contentBlock, { type: 'text', text: PARSE_PROMPT }] }]
+          }
+
+        } else if (source === 'url' && url) {
+          const firecrawlText = await fetchWithFirecrawl(url)
+          let pageText = ''
+          if (firecrawlText) {
+            pageText = firecrawlText.slice(0, 60000)
+          } else if (ZILLOW_REDFIN.test(url)) {
+            fail('Zillow and Redfin block automated access. Switch to "Paste text" mode: open the listing, press Ctrl+A then Ctrl+C, and paste the text here.')
+            return
+          } else {
+            try {
+              const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HomeAgent/1.0)' }, signal: AbortSignal.timeout(15000) })
+              pageText = stripHtml(await res.text())
+            } catch (e) { fail(`Could not fetch URL: ${String(e)}`); return }
+          }
+          messages = [{ role: 'user', content: `Webpage content from ${url}:\n\n${pageText}\n\n${PARSE_PROMPT}` }]
+
+        } else if (source === 'text' && text) {
+          messages = [{ role: 'user', content: `Property listing text:\n\n${text.slice(0, 60000)}\n\n${PARSE_PROMPT}` }]
+
+        } else {
+          fail('source must be "document" (with path), "url" (with url), or "text" (with text)')
+          return
+        }
+
+        // Stream from Anthropic — each delta event triggers a heartbeat to keep the connection alive
+        const stream = anthropic.messages.stream({ model: 'claude-sonnet-4-6', max_tokens: 4096, messages })
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta') hb()
+        }
+        const final = await stream.finalMessage()
+        const raw = final.content.filter((b): b is Anthropic.TextBlock => b.type === 'text').map(b => b.text).join('')
+        end(extractJson(raw))
+
+      } catch (e) {
+        fail(`Parse failed: ${String(e)}`)
+      }
+    }
+  })
+
+  return new Response(readable, { headers: { 'Content-Type': 'application/x-ndjson' } })
 }
