@@ -6,6 +6,7 @@ import { DocumentsTab } from './documents-tab'
 import { AssetsTab } from './assets-tab'
 import { PhotosTab } from './photos-tab'
 import { type Asset } from './asset-panel'
+import { PropertyVisual } from '@/components/property-visual'
 
 type PropertyDetails = {
   id: string; name: string; address: string | null
@@ -26,7 +27,7 @@ type Props = {
   isOwner: boolean
 }
 
-const TABS = ['Details', 'Documents', 'Assets', 'Photos'] as const
+const TABS = ['Details', 'Documents', 'Assets', 'Photos', 'Visual'] as const
 type Tab = typeof TABS[number]
 
 export function HomeDetailsTabs({ property, docs, assets, isOwner }: Props) {
@@ -53,12 +54,18 @@ export function HomeDetailsTabs({ property, docs, assets, isOwner }: Props) {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {tab === 'Details'   && <DetailsTab   property={property} isOwner={isOwner} />}
-        {tab === 'Documents' && <DocumentsTab initial={docs}     isOwner={isOwner} />}
-        {tab === 'Assets'    && <AssetsTab    initial={assets}   isOwner={isOwner} />}
-        {tab === 'Photos'    && <PhotosTab />}
-      </div>
+      {tab === 'Visual' ? (
+        <div className="px-6 py-8">
+          <PropertyVisual />
+        </div>
+      ) : (
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          {tab === 'Details'   && <DetailsTab   property={property} isOwner={isOwner} />}
+          {tab === 'Documents' && <DocumentsTab initial={docs}     isOwner={isOwner} />}
+          {tab === 'Assets'    && <AssetsTab    initial={assets}   isOwner={isOwner} />}
+          {tab === 'Photos'    && <PhotosTab />}
+        </div>
+      )}
     </div>
   )
 }
