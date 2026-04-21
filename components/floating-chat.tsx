@@ -64,7 +64,7 @@ export function FloatingChat() {
       {open && (
         <div
           className="fixed bottom-20 right-5 z-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
-          style={{ width: 360, height: 480, border: '1px solid oklch(0.88 0.04 155)', backgroundColor: 'white' }}
+          style={{ width: 360, height: 480, border: '1px solid oklch(0.88 0.04 155)', backgroundColor: 'oklch(0.992 0.003 75)' }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 shrink-0"
@@ -82,27 +82,29 @@ export function FloatingChat() {
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
             {messages.map((m, i) => (
               <div key={i} className={m.role === 'user' ? 'flex justify-end' : ''}>
-                <div className={`text-sm leading-relaxed max-w-[85%] ${
-                  m.role === 'user'
-                    ? 'bg-zinc-100 text-zinc-700 px-3 py-2 rounded-2xl rounded-tr-sm'
-                    : 'text-zinc-700'
-                }`}>
+                <div
+                  className="text-sm leading-relaxed max-w-[85%]"
+                  style={m.role === 'user'
+                    ? { backgroundColor: 'oklch(0.93 0.02 75)', color: 'oklch(0.40 0.015 75)', padding: '8px 12px', borderRadius: '16px 16px 4px 16px' }
+                    : { color: 'oklch(0.42 0.015 75)' }
+                  }
+                >
                   {m.content}
                 </div>
               </div>
             ))}
             {loading && (
               <div className="flex gap-1 items-center pt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: 'oklch(0.70 0.06 155)', animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: 'oklch(0.70 0.06 155)', animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: 'oklch(0.70 0.06 155)', animationDelay: '300ms' }} />
               </div>
             )}
             <div ref={bottomRef} />
           </div>
 
           {/* Input */}
-          <div className="shrink-0 flex gap-2 px-3 py-3 border-t border-zinc-100">
+          <div className="shrink-0 flex gap-2 px-3 py-3 border-t" style={{ borderColor: 'oklch(0.92 0.01 75)' }}>
             <input
               ref={inputRef}
               type="text"
@@ -111,7 +113,8 @@ export function FloatingChat() {
               onKeyDown={e => e.key === 'Enter' && send()}
               placeholder="Ask anything…"
               disabled={loading}
-              className="flex-1 text-sm border border-zinc-200 rounded-xl px-3 py-2 focus:outline-none focus:border-zinc-400 disabled:opacity-50 bg-zinc-50"
+              className="flex-1 text-sm rounded-xl px-3 py-2 focus:outline-none disabled:opacity-50"
+              style={{ border: '1px solid oklch(0.88 0.02 75)', backgroundColor: 'oklch(0.985 0.004 75)', color: 'oklch(0.42 0.015 75)' }}
             />
             <button
               onClick={send}

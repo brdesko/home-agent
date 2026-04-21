@@ -180,14 +180,17 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
     const raw = localInputs[ik] ?? ''
     const num = parseFloat(raw.replace(/[^0-9.]/g, '')) || 0
     setLocalInputs(prev => { const next = { ...prev }; delete next[ik]; return next })
-    updateLocal(year, quarter, { [key]: num } as Partial<QuarterlyBudget>)
-    save(year, quarter)
+    const patch = { [key]: num } as Partial<QuarterlyBudget>
+    updateLocal(year, quarter, patch)
+    // Pass patch directly so save doesn't read stale React state
+    save(year, quarter, patch)
   }
 
   function handleItems(year: number, quarter: number, items: ExpenseItem[]) {
     const total = items.reduce((s, i) => s + (i.amount || 0), 0)
-    updateLocal(year, quarter, { additional_expense_items: items, additional_expenses: total })
-    save(year, quarter)
+    const patch = { additional_expense_items: items, additional_expenses: total }
+    updateLocal(year, quarter, patch)
+    save(year, quarter, patch)
   }
 
   function displayValue(year: number, quarter: number, key: keyof QuarterlyBudget): string {

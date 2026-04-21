@@ -38,7 +38,7 @@ export default function LoginPage() {
         className="hidden md:flex flex-col justify-between w-[55%] relative overflow-hidden p-14"
         style={{ backgroundColor: 'oklch(0.50 0.10 155)' }}
       >
-        {/* Topographic / parcel-map SVG background */}
+        {/* Plat-map / cadastral survey SVG background */}
         <svg
           aria-hidden="true"
           className="absolute inset-0 w-full h-full"
@@ -46,53 +46,64 @@ export default function LoginPage() {
           preserveAspectRatio="xMidYMid slice"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Outer contour layers — land parcel / topo survey aesthetic */}
           <g fill="none" stroke="white">
-            {/* Large irregular terrain shapes */}
-            <path strokeWidth="0.8" strokeOpacity="0.34"
-              d="M -60 720 C 80 680 200 560 310 480 C 420 400 540 380 640 420 C 720 450 740 560 700 660 C 660 760 560 820 420 840 C 280 860 100 820 0 770 Z" />
-            <path strokeWidth="0.8" strokeOpacity="0.24"
-              d="M -20 680 C 100 640 220 530 320 460 C 420 390 530 372 620 406 C 690 432 710 530 675 622 C 638 716 548 768 418 788 C 288 808 120 774 30 732 Z" />
-            <path strokeWidth="0.8" strokeOpacity="0.30"
-              d="M 20 640 C 130 602 238 500 330 440 C 422 380 522 364 602 394 C 665 416 682 504 650 586 C 616 670 534 716 414 736 C 294 756 138 728 60 694 Z" />
-            <path strokeWidth="0.8" strokeOpacity="0.36"
-              d="M 60 600 C 158 564 255 470 340 420 C 424 370 514 356 584 382 C 640 402 654 478 625 550 C 594 624 519 666 410 684 C 300 702 156 678 88 654 Z" />
-            <path strokeWidth="0.9" strokeOpacity="0.42"
-              d="M 100 560 C 186 526 271 440 350 398 C 426 358 506 347 566 370 C 615 388 627 454 600 516 C 572 580 504 618 406 634 C 306 650 174 630 116 610 Z" />
-            <path strokeWidth="0.9" strokeOpacity="0.34"
-              d="M 140 520 C 214 488 288 410 360 375 C 428 342 498 334 548 355 C 590 372 600 430 575 483 C 549 538 488 572 400 586 C 312 600 190 580 144 564 Z" />
+            {/* Main parcel boundary — irregular polygon, clearly land-survey */}
+            <polygon
+              points="80,110 560,80 620,420 580,760 420,840 100,810 50,480 80,110"
+              strokeWidth="1.2" strokeOpacity="0.35"
+            />
+            {/* Inner set-back line */}
+            <polygon
+              points="120,150 520,122 572,420 536,730 420,800 138,772 96,480 120,150"
+              strokeWidth="0.7" strokeOpacity="0.18" strokeDasharray="6 4"
+            />
 
-            {/* Upper ridge group */}
-            <path strokeWidth="0.7" strokeOpacity="0.34"
-              d="M 80 280 C 160 220 280 180 380 190 C 460 198 520 240 540 300 C 556 348 530 400 480 430 C 420 464 340 468 260 450 C 180 432 110 388 88 340 Z" />
-            <path strokeWidth="0.8" strokeOpacity="0.14"
-              d="M 110 290 C 183 236 292 200 382 210 C 455 218 510 256 528 310 C 542 354 518 400 472 428 C 416 458 342 462 266 446 C 190 430 124 390 104 346 Z" />
-            <path strokeWidth="0.8" strokeOpacity="0.34"
-              d="M 140 300 C 206 252 304 220 385 230 C 450 238 500 272 516 320 C 528 360 506 402 462 426 C 412 453 343 456 271 441 C 200 428 138 392 120 352 Z" />
-            <path strokeWidth="0.9" strokeOpacity="0.42"
-              d="M 168 312 C 228 268 316 240 387 250 C 446 258 490 288 504 330 C 514 366 495 403 453 424 C 408 447 343 450 277 436 C 210 424 152 394 136 358 Z" />
-            <path strokeWidth="0.9" strokeOpacity="0.38"
-              d="M 194 324 C 250 284 328 260 390 270 C 442 278 480 304 492 340 C 501 372 484 405 445 422 C 403 442 345 444 283 432 C 220 420 166 396 152 364 Z" />
+            {/* Interior subdivision lines */}
+            <line x1="80" y1="110" x2="580" y2="760" strokeWidth="0.6" strokeOpacity="0.16" />
+            <line x1="560" y1="80" x2="100" y2="810" strokeWidth="0.6" strokeOpacity="0.16" />
+            <line x1="50" y1="480" x2="620" y2="420" strokeWidth="0.6" strokeOpacity="0.20" />
 
-            {/* Property boundary lines — straight survey marks */}
-            <line x1="0" y1="180" x2="660" y2="220" strokeWidth="0.6" strokeOpacity="0.09" />
-            <line x1="0" y1="520" x2="660" y2="560" strokeWidth="0.6" strokeOpacity="0.09" />
-            <line x1="0" y1="760" x2="660" y2="800" strokeWidth="0.6" strokeOpacity="0.08" />
-            <line x1="180" y1="0" x2="220" y2="900" strokeWidth="0.6" strokeOpacity="0.09" />
-            <line x1="440" y1="0" x2="480" y2="900" strokeWidth="0.6" strokeOpacity="0.08" />
+            {/* Zone fill outlines — house area */}
+            <rect x="200" y="220" width="180" height="140" rx="4"
+              strokeWidth="0.9" strokeOpacity="0.30" />
+            {/* Zone fill outlines — barn area */}
+            <rect x="90" y="480" width="140" height="100" rx="4"
+              strokeWidth="0.9" strokeOpacity="0.25" />
+            {/* Zone fill outlines — pool */}
+            <ellipse cx="490" cy="300" rx="55" ry="38"
+              strokeWidth="0.9" strokeOpacity="0.25" />
 
-            {/* Small parcel marker dots */}
-            <circle cx="200" cy="192" r="3" fill="white" fillOpacity="0.15" />
-            <circle cx="456" cy="214" r="3" fill="white" fillOpacity="0.15" />
-            <circle cx="180" cy="535" r="3" fill="white" fillOpacity="0.15" />
-            <circle cx="460" cy="548" r="3" fill="white" fillOpacity="0.12" />
-            <circle cx="320" cy="375" r="2" fill="white" fillOpacity="0.18" />
+            {/* Bearing / dimension annotation lines */}
+            <line x1="80" y1="100" x2="560" y2="70" strokeWidth="0.5" strokeOpacity="0.22" />
+            <line x1="80" y1="92" x2="80" y2="118" strokeWidth="0.8" strokeOpacity="0.30" />
+            <line x1="560" y1="62" x2="560" y2="88" strokeWidth="0.8" strokeOpacity="0.30" />
 
-            {/* Subtle elevation tick marks */}
-            <line x1="210" y1="185" x2="210" y2="200" strokeWidth="0.7" strokeOpacity="0.34" />
-            <line x1="465" y1="207" x2="465" y2="222" strokeWidth="0.7" strokeOpacity="0.34" />
-            <line x1="185" y1="528" x2="185" y2="543" strokeWidth="0.7" strokeOpacity="0.34" />
-            <line x1="469" y1="541" x2="469" y2="556" strokeWidth="0.7" strokeOpacity="0.15" />
+            {/* Corner pins */}
+            <circle cx="80"  cy="110" r="4" fill="white" fillOpacity="0.22" />
+            <circle cx="560" cy="80"  r="4" fill="white" fillOpacity="0.22" />
+            <circle cx="620" cy="420" r="4" fill="white" fillOpacity="0.20" />
+            <circle cx="580" cy="760" r="4" fill="white" fillOpacity="0.20" />
+            <circle cx="420" cy="840" r="4" fill="white" fillOpacity="0.20" />
+            <circle cx="100" cy="810" r="4" fill="white" fillOpacity="0.20" />
+            <circle cx="50"  cy="480" r="4" fill="white" fillOpacity="0.20" />
+
+            {/* Tick marks at corners */}
+            <line x1="72"  y1="110" x2="88"  y2="110" strokeWidth="0.8" strokeOpacity="0.28" />
+            <line x1="80"  y1="102" x2="80"  y2="118" strokeWidth="0.8" strokeOpacity="0.28" />
+            <line x1="552" y1="80"  x2="568" y2="80"  strokeWidth="0.8" strokeOpacity="0.28" />
+            <line x1="560" y1="72"  x2="560" y2="88"  strokeWidth="0.8" strokeOpacity="0.28" />
+
+            {/* Contour lines — organic background texture, lower layer */}
+            <path strokeWidth="0.5" strokeOpacity="0.10"
+              d="M 0 600 Q 200 540 400 580 Q 550 610 660 570" />
+            <path strokeWidth="0.5" strokeOpacity="0.10"
+              d="M 0 650 Q 180 600 380 630 Q 540 655 660 620" />
+            <path strokeWidth="0.5" strokeOpacity="0.10"
+              d="M 0 700 Q 200 660 420 680 Q 560 695 660 670" />
+            <path strokeWidth="0.5" strokeOpacity="0.10"
+              d="M 100 200 Q 300 170 480 210 Q 580 230 660 200" />
+            <path strokeWidth="0.5" strokeOpacity="0.10"
+              d="M 60 260 Q 260 230 460 265 Q 570 280 660 255" />
           </g>
         </svg>
 
@@ -112,13 +123,10 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Bottom survey data */}
-        <div className="relative z-10 space-y-2">
-          <p className="text-[11px] font-mono tracking-widest" style={{ color: 'rgba(255,255,255,0.28)' }}>
-            40.4233° N &nbsp; 75.0551° W
-          </p>
-          <p className="text-[11px] tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.20)' }}>
-            5.3 ac · Bucks County, PA
+        {/* Bottom caption */}
+        <div className="relative z-10">
+          <p className="text-[11px] tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            Property intelligence
           </p>
         </div>
       </div>

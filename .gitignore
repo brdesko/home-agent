@@ -42,3 +42,7 @@ next-env.d.ts
 
 # claude code local settings
 .claude/settings.local.json
+*.pdf
+Home Picture*.jpg
+Home Picture*.jpeg
+Home Picture*.png
