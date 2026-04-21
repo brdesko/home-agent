@@ -57,7 +57,7 @@ ${referencesSection}
 
 Use project and goal IDs when calling tools. Reference the relevant goal when proposing or modifying projects.
 
-A project has: name, domain ('farm', 'renovation', 'grounds', 'maintenance', 'home-systems', or new), status ('planned', 'active', 'on_hold', 'complete'), priority ('low', 'medium', 'high'), effort ('low', 'medium', 'high', 'very_high' — reflects owner time/energy required, not cost; hired-out work is low effort even if expensive), target_year and target_quarter (when the project is planned to happen), and description.
+A project has: name, domain ('farm', 'renovation', 'grounds', 'maintenance', 'home-systems', or new), status ('planned', 'active', 'on_hold', 'complete', 'cancelled' — use cancelled when a project is abandoned; it is excluded from all spend and effort metrics), priority ('low', 'medium', 'high'), effort ('low', 'medium', 'high', 'very_high' — reflects owner time/energy required, not cost; hired-out work is low effort even if expensive), target_year and target_quarter (when the project is planned to happen), and description.
 
 A task has: title, status ('todo', 'in_progress', 'done', 'blocked'), and optional due_date (YYYY-MM-DD).
 
@@ -82,6 +82,10 @@ When a message begins with task completion context ("I just completed..."):
 3. If a trusted vendor is relevant to next steps, mention them by name.
 4. Propose a specific, concrete set of changes. Wait for explicit approval before calling any update or create tools.
 5. Keep it tight — two or three well-reasoned suggestions beats a laundry list.
+
+When managing budget lines: use get_project_budget_lines to see what exists before adding or removing. Use add_budget_line to record estimated costs or actual spend. Use remove_budget_line when reallocating lines between projects (e.g., when splitting a project into two — move the relevant lines rather than duplicating them).
+
+When effort or cost estimates are not provided, suggest reasonable placeholders based on the domain, description, and any saved references. Label them clearly as placeholders (e.g., "Placeholder estimate based on typical renovation projects — confirm when you have quotes"). Always propose these for explicit approval rather than silently defaulting.
 
 When a contractor, service provider, brand, or resource comes up positively in conversation — offer to save it to References. Keep the offer brief. If yes, call save_reference with useful context in the notes field.
 
@@ -159,6 +163,10 @@ type SetQuarterlyBudgetInput = {
   additional_expenses?: number
   allocation_pct?: number
 }
+
+type GetProjectBudgetLinesInput = { project_id: string }
+type AddBudgetLineInput = { project_id: string; description: string; amount: number; line_type?: string }
+type RemoveBudgetLineInput = { budget_line_id: string }
 
 type SaveReferenceInput = {
   type: 'vendor' | 'brand' | 'resource'
@@ -256,7 +264,7 @@ const tools: Anthropic.Tool[] = [
         project_id:     { type: 'string' },
         name:           { type: 'string' },
         domain:         { type: 'string' },
-        status:         { type: 'string', enum: ['planned', 'active', 'on_hold', 'complete'] },
+        status:         { type: 'string', enum: ['planned', 'active', 'on_hold', 'complete', 'cancelled'] },
         priority:       { type: 'string', enum: ['low', 'medium', 'high'] },
         effort:         { type: 'string', enum: ['low', 'medium', 'high', 'very_high'], description: 'Owner effort level' },
         target_year:    { type: 'number', description: 'Year this project is planned for' },
@@ -279,6 +287,42 @@ const tools: Anthropic.Tool[] = [
         due_date: { type: 'string', description: 'ISO date YYYY-MM-DD, or null to clear' },
       },
       required: ['task_id'],
+    },
+  },
+  {
+    name: 'get_project_budget_lines',
+    description: 'Returns current budget lines for a project. Call before adding or removing lines so you know what exists.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        project_id: { type: 'string' },
+      },
+      required: ['project_id'],
+    },
+  },
+  {
+    name: 'add_budget_line',
+    description: 'Adds a budget line to a project. Only call after explicit user approval.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        project_id:  { type: 'string' },
+        description: { type: 'string' },
+        amount:      { type: 'number' },
+        line_type:   { type: 'string', enum: ['estimated', 'actual'], description: 'estimated = planned cost, actual = recorded spend' },
+      },
+      required: ['project_id', 'description', 'amount'],
+    },
+  },
+  {
+    name: 'remove_budget_line',
+    description: 'Removes a budget line by ID. Call get_project_budget_lines first to get IDs. Only call after explicit user approval.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        budget_line_id: { type: 'string' },
+      },
+      required: ['budget_line_id'],
     },
   },
   {
@@ -450,6 +494,52 @@ export async function POST(req: NextRequest) {
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error.message}`, is_error: true })
         } else {
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(tasks) })
+        }
+      }
+
+      // ── get_project_budget_lines ─────────────────────────────────────
+      else if (block.name === 'get_project_budget_lines') {
+        const { project_id } = block.input as GetProjectBudgetLinesInput
+        const { data: lines, error } = await supabase
+          .from('budget_lines')
+          .select('id, description, amount, line_type, category')
+          .eq('project_id', project_id)
+          .order('created_at')
+        if (error) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error.message}`, is_error: true })
+        } else {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(lines) })
+        }
+      }
+
+      // ── add_budget_line ───────────────────────────────────────────────
+      else if (block.name === 'add_budget_line') {
+        const input = block.input as AddBudgetLineInput
+        const { data, error } = await supabase
+          .from('budget_lines')
+          .insert({ property_id: PROPERTY_ID, project_id: input.project_id, description: input.description, amount: input.amount, line_type: input.line_type ?? 'estimated' })
+          .select('id, description, amount, line_type')
+          .single()
+        if (error || !data) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error?.message}`, is_error: true })
+        } else {
+          changes.push({ type: 'task_updated', summary: `Added budget line: ${data.description}` })
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify({ success: true, ...data }) })
+        }
+      }
+
+      // ── remove_budget_line ────────────────────────────────────────────
+      else if (block.name === 'remove_budget_line') {
+        const { budget_line_id } = block.input as RemoveBudgetLineInput
+        const { error } = await supabase
+          .from('budget_lines')
+          .delete()
+          .eq('id', budget_line_id)
+        if (error) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error.message}`, is_error: true })
+        } else {
+          changes.push({ type: 'task_updated', summary: 'Removed budget line' })
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify({ success: true }) })
         }
       }
 

@@ -14,10 +14,11 @@ const DOMAIN_LABELS: Record<string, string> = {
 const DOMAIN_ORDER = ['renovation', 'farm', 'grounds', 'maintenance', 'home-systems']
 
 const STATUS_STYLES: Record<string, string> = {
-  planned:  'bg-zinc-100 text-zinc-500',
-  active:   'bg-blue-50 text-blue-700',
-  on_hold:  'bg-amber-50 text-amber-700',
-  complete: 'bg-green-50 text-green-700',
+  planned:   'bg-zinc-100 text-zinc-500',
+  active:    'bg-blue-50 text-blue-700',
+  on_hold:   'bg-amber-50 text-amber-700',
+  complete:  'bg-green-50 text-green-700',
+  cancelled: 'bg-zinc-100 text-zinc-400',
 }
 
 const EFFORT_LABEL: Record<string, string> = {
@@ -70,7 +71,7 @@ export function ProjectManagementTab({ projects, goals, isOwner }: Props) {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[p.priority] ?? 'bg-zinc-300'}`} />
-                        <span className="font-medium text-zinc-900 leading-snug">{p.name}</span>
+                        <span className={`font-medium leading-snug ${p.status === 'cancelled' ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>{p.name}</span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {p.effort && (

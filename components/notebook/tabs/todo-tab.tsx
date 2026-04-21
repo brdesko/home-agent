@@ -30,17 +30,18 @@ type Props = {
 export function TodoTab({ projects }: Props) {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(true)
-  const [suggestionsError, setSuggestionsError] = useState(false)
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/suggestions')
       .then(r => r.json())
       .then(d => {
         setSuggestions(d.suggestions ?? [])
+        if (d.weatherError) setSuggestionsError(d.weatherError)
         setLoadingSuggestions(false)
       })
-      .catch(() => {
-        setSuggestionsError(true)
+      .catch(e => {
+        setSuggestionsError(String(e))
         setLoadingSuggestions(false)
       })
   }, [])
@@ -89,7 +90,7 @@ export function TodoTab({ projects }: Props) {
         {loadingSuggestions ? (
           <p className="text-sm text-zinc-400 animate-pulse">Checking the forecast…</p>
         ) : suggestionsError ? (
-          <p className="text-sm text-zinc-400">Couldn't load suggestions right now.</p>
+          <p className="text-sm text-zinc-400">Weather unavailable: <span className="text-zinc-300 text-xs">{suggestionsError}</span></p>
         ) : suggestions.length === 0 ? (
           <p className="text-sm text-zinc-400">No suggestions at the moment.</p>
         ) : (

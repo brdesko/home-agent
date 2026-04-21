@@ -38,14 +38,27 @@ export async function GET() {
 
   // Fetch weather (cache 1 hour)
   let weatherSummary = 'Weather data unavailable.'
+  let weatherError: string | null = null
   try {
-    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${LAT}&lon=${LON}&appid=${process.env.OPENWEATHER_API_KEY}&units=imperial&cnt=40`
-    const res = await fetch(url, { next: { revalidate: 3600 } })
-    if (res.ok) {
-      const json = await res.json()
-      weatherSummary = summarizeForecast(json.list)
+    const key = process.env.OPENWEATHER_API_KEY
+    if (!key) {
+      weatherError = 'OPENWEATHER_API_KEY environment variable is not set'
+    } else {
+      const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${LAT}&lon=${LON}&appid=${key}&units=imperial&cnt=40`
+      const res = await fetch(url, { cache: 'no-store' })
+      if (res.ok) {
+        const json = await res.json()
+        weatherSummary = summarizeForecast(json.list)
+      } else {
+        const body = await res.text()
+        weatherError = `OpenWeatherMap ${res.status}: ${body}`
+        console.error('[suggestions] weather fetch failed:', weatherError)
+      }
     }
-  } catch { /* leave default */ }
+  } catch (e) {
+    weatherError = String(e)
+    console.error('[suggestions] weather exception:', weatherError)
+  }
 
   // Fetch active tasks with project context
   const { data: taskRows } = await supabase
@@ -92,5 +105,5 @@ Give exactly 2-3 short, specific, actionable suggestions that account for the we
 
   const suggestions = text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 3)
 
-  return NextResponse.json({ suggestions, weatherSummary })
+  return NextResponse.json({ suggestions, weatherSummary, weatherError })
 }

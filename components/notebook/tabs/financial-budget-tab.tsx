@@ -37,7 +37,8 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const slots    = getRollingQuarters(4)
-  const beyondPs = projects.filter(p => isBeyond(slots, p.target_year, p.target_quarter))
+  const active   = projects.filter(p => p.status !== 'cancelled')
+  const beyondPs = active.filter(p => isBeyond(slots, p.target_year, p.target_quarter))
 
   function getRow(year: number, quarter: number): QuarterlyBudget {
     return rows.find(r => r.year === year && r.quarter === quarter) ?? {
@@ -151,7 +152,7 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
         <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Project Commitments</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {slots.map(s => {
-            const slotPs   = projects.filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
+            const slotPs   = active.filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
             const budget   = quarterBudget(getRow(s.year, s.quarter))
             const committed = slotPs.reduce((sum, p) => sum + projectEstimated(p), 0)
             const surplus  = budget - committed

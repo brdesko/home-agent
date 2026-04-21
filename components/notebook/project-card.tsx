@@ -30,10 +30,11 @@ export type Project = {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  planned:  'bg-zinc-100 text-zinc-600',
-  active:   'bg-blue-50 text-blue-700',
-  on_hold:  'bg-amber-50 text-amber-700',
-  complete: 'bg-green-50 text-green-700',
+  planned:   'bg-zinc-100 text-zinc-600',
+  active:    'bg-blue-50 text-blue-700',
+  on_hold:   'bg-amber-50 text-amber-700',
+  complete:  'bg-green-50 text-green-700',
+  cancelled: 'bg-zinc-100 text-zinc-400',
 }
 
 const PRIORITY_DOT: Record<string, string> = {

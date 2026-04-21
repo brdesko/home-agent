@@ -22,13 +22,14 @@ type Props = {
 
 export function EffortBudgetTab({ projects }: Props) {
   const slots    = getRollingQuarters(4)
-  const beyondPs = projects.filter(p => isBeyond(slots, p.target_year, p.target_quarter))
+  const active   = projects.filter(p => p.status !== 'cancelled')
+  const beyondPs = active.filter(p => isBeyond(slots, p.target_year, p.target_quarter))
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {slots.map(s => {
-          const slotPs = projects.filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
+          const slotPs = active.filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
           const score  = slotPs.reduce((sum, p) => sum + (EFFORT_SCORE[p.effort ?? ''] ?? 0), 0)
           const chip   = effortChip(score)
           const pct    = Math.min(100, (score / MAX_EFFORT) * 100)

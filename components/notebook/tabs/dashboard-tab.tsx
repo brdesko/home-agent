@@ -58,13 +58,14 @@ export function DashboardTab({ goals, projects, quarters, isOwner }: Props) {
   const [sub, setSub] = useState<SubTab>('Financial Budget')
 
   const slots    = getRollingQuarters(4)
-  const beyondPs = projects.filter(p => isBeyond(slots, p.target_year, p.target_quarter))
+  const active   = projects.filter(p => p.status !== 'cancelled')
+  const beyondPs = active.filter(p => isBeyond(slots, p.target_year, p.target_quarter))
 
   type RiskBucket = { label: string; slotPs: typeof projects; budget: number; committed: number; effortScore: number; financialRisk: number; effortRisk: number; combined: number }
 
   const buckets: RiskBucket[] = [
     ...slots.map(s => {
-      const slotPs    = projects.filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
+      const slotPs    = active.filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
       const qRow      = quarters.find(r => r.year === s.year && r.quarter === s.quarter)
       const budget    = qRow ? quarterBudget(qRow) : 0
       const committed = slotPs.reduce((sum, p) => sum + p.budget_lines.filter(b => b.line_type === 'estimated').reduce((s2, b) => s2 + b.amount, 0), 0)

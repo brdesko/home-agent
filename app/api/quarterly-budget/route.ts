@@ -21,7 +21,8 @@ export async function PUT(req: NextRequest) {
     allocation_pct?: number
   }
 
-  const { year, quarter, ...fields } = body
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { year, quarter, id: _id, ...fields } = body as typeof body & { id?: string }
 
   const { data, error } = await supabase
     .from('quarterly_budget')
