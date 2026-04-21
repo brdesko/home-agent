@@ -77,14 +77,6 @@ function getMimeCategory(name: string): 'pdf' | 'image' | 'text' {
   return 'text'
 }
 
-function getImageMime(name: string): 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' {
-  const ext = name.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'png') return 'image/png'
-  if (ext === 'gif') return 'image/gif'
-  if (ext === 'webp') return 'image/webp'
-  return 'image/jpeg'
-}
-
 function stripHtml(html: string): string {
   return html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -94,8 +86,6 @@ function stripHtml(html: string): string {
     .trim()
     .slice(0, 60000)
 }
-
-const MAX_PDF_BYTES = 10 * 1024 * 1024 // 10 MB
 
 export async function POST(req: NextRequest) {
   try {
@@ -110,36 +100,14 @@ export async function POST(req: NextRequest) {
     let parseResult: unknown
 
     if (source === 'document' && path) {
-      const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(path)
-      if (dlErr || !blob) return NextResponse.json({ error: dlErr?.message ?? 'Download failed' }, { status: 500 })
-
-      const buffer   = Buffer.from(await blob.arrayBuffer())
       const fileName = path.split('/').pop() ?? ''
       const category = getMimeCategory(fileName)
 
-      if (buffer.byteLength > MAX_PDF_BYTES) {
-        return NextResponse.json({
-          error: `File is too large to parse (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB). Maximum supported size is 10 MB.`
-        }, { status: 422 })
-      }
-
-      const base64 = buffer.toString('base64')
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let contentBlock: any
-
-      if (category === 'pdf') {
-        contentBlock = {
-          type: 'document',
-          source: { type: 'base64', media_type: 'application/pdf', data: base64 },
-        }
-      } else if (category === 'image') {
-        contentBlock = {
-          type: 'image',
-          source: { type: 'base64', media_type: getImageMime(fileName), data: base64 },
-        }
-      } else {
-        const textContent = buffer.toString('utf-8').slice(0, 60000)
+      if (category === 'text') {
+        // Text files: download and send as plain text
+        const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(path)
+        if (dlErr || !blob) return NextResponse.json({ error: dlErr?.message ?? 'Download failed' }, { status: 500 })
+        const textContent = Buffer.from(await blob.arrayBuffer()).toString('utf-8').slice(0, 60000)
         const msg = await anthropic.messages.create({
           model: 'claude-sonnet-4-6',
           max_tokens: 4096,
@@ -149,6 +117,21 @@ export async function POST(req: NextRequest) {
         parseResult = extractJson(raw)
         return NextResponse.json(parseResult)
       }
+
+      // PDFs and images: generate a short-lived signed URL and let Anthropic fetch directly.
+      // This avoids downloading+base64-encoding in our function, which was causing timeouts.
+      const { data: signedData, error: signErr } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(path, 300) // 5-minute URL, enough for Anthropic to fetch
+
+      if (signErr || !signedData?.signedUrl) {
+        return NextResponse.json({ error: signErr?.message ?? 'Could not generate signed URL' }, { status: 500 })
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contentBlock: any = category === 'pdf'
+        ? { type: 'document', source: { type: 'url', url: signedData.signedUrl } }
+        : { type: 'image',    source: { type: 'url', url: signedData.signedUrl } }
 
       const msg = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',

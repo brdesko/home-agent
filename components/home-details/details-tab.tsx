@@ -160,7 +160,7 @@ export function DetailsTab({ property: initial, isOwner }: Props) {
 
             {parseMode === 'url' ? (
               <div className="space-y-1.5">
-                <p className="text-xs text-zinc-400">Zillow and Redfin block automated access — use "Paste text" instead for those.</p>
+                <p className="text-xs text-zinc-400">Paste any property listing URL, including Zillow and Redfin.</p>
                 <div className="flex gap-2">
                   <input value={parseUrl} onChange={e => setParseUrl(e.target.value)}
                     placeholder="https://…"
@@ -173,7 +173,7 @@ export function DetailsTab({ property: initial, isOwner }: Props) {
               </div>
             ) : (
               <div className="space-y-1.5">
-                <p className="text-xs text-zinc-400">On the Zillow or Redfin listing, press Ctrl+A then Ctrl+C, then paste below.</p>
+                <p className="text-xs text-zinc-400">Paste listing text here if you prefer not to use the URL option.</p>
                 <textarea value={pasteText} onChange={e => setPasteText(e.target.value)}
                   rows={5} placeholder="Paste listing text here…"
                   className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:border-zinc-400 resize-none" />
