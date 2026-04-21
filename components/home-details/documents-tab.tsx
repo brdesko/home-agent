@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { ParseConfirmation, type ParseResult } from './parse-confirmation'
 
 type Doc = {
@@ -49,12 +50,22 @@ export function DocumentsTab({ initial, isOwner }: Props) {
     if (!file) return
     setUploading(true); setUploadErr(null)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/documents/upload', { method: 'POST', body: fd })
-      const data = await res.json()
-      if (!res.ok) { setUploadErr(data.error ?? 'Upload failed'); return }
-      // Refresh list
+      // Get a signed upload URL — file goes directly to Supabase, bypassing Vercel's 4.5 MB limit
+      const urlRes = await fetch('/api/documents/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name }),
+      })
+      const urlData = await urlRes.json()
+      if (!urlRes.ok) { setUploadErr(urlData.error ?? 'Upload failed'); return }
+
+      const supabase = createClient()
+      const { error: upErr } = await supabase.storage
+        .from('Home Agent')
+        .uploadToSignedUrl(urlData.path, urlData.token, file, { contentType: file.type })
+
+      if (upErr) { setUploadErr(upErr.message); return }
+
       const listRes = await fetch('/api/documents')
       if (listRes.ok) setDocs(await listRes.json())
     } catch (e) { setUploadErr(String(e)) } finally {
