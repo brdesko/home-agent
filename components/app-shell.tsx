@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { BookOpen, MessageSquare, Home, Bookmark, ShoppingBag, ChevronDown, Archive, Trash2 } from 'lucide-react'
 import SignOutButton from './sign-out-button'
+import { FloatingChat } from './floating-chat'
 
 const SIDEBAR_BG = 'oklch(0.16 0.012 80)'
 const SAGE       = 'oklch(0.50 0.10 155)'
@@ -115,6 +116,9 @@ export function AppShell({ user, propertyName, propertyId, allProperties, childr
       <main className="flex-1 overflow-hidden flex flex-col bg-background">
         {children}
       </main>
+
+      {/* Persistent floating chat — mounted here so it survives page navigation */}
+      <FloatingChat />
     </div>
   )
 }

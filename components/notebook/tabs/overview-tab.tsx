@@ -1,13 +1,16 @@
 'use client'
 
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { type Project } from '../project-card'
 import { type TimelineEvent } from '../timeline-panel'
 import { type Goal } from '../goals-panel'
 import { type QuarterlyBudget } from '../budget-tab'
 import { type OngoingTask } from './todo-tab'
-import { getCurrentQuarter, quarterLabel, fmtCurrency } from '../quarter-utils'
+import { getCurrentQuarter, getRollingQuarters, quarterLabel, fmtCurrency } from '../quarter-utils'
 
 const SAGE = 'oklch(0.50 0.10 155)'
+const SAGE_HEX = '#4a7c6a'
+
 const EFFORT_SCORE: Record<string, number> = { low: 1, medium: 2, high: 3, very_high: 4 }
 const MAX_EFFORT = 10
 
@@ -25,6 +28,7 @@ type Props = {
   goals: GoalWithProgress[]
   quarterlyBudgets: QuarterlyBudget[]
   ongoingTasks: OngoingTask[]
+  onNavigate?: (tab: string) => void
 }
 
 function qBudget(q: QuarterlyBudget): number {
@@ -67,7 +71,33 @@ function shortDate(iso: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoingTasks }: Props) {
+function fmt(n: number) {
+  if (n >= 10000) return `$${Math.round(n / 1000)}k`
+  if (n >= 1000)  return `$${(n / 1000).toFixed(1)}k`
+  return `$${n}`
+}
+
+function ClickableCard({ children, onClick, className, style }: {
+  children: React.ReactNode
+  onClick?: () => void
+  className?: string
+  style?: React.CSSProperties
+}) {
+  return (
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={e => e.key === 'Enter' && onClick?.()}
+      className={`${className ?? ''} ${onClick ? 'cursor-pointer hover:brightness-[0.97] transition-all' : ''}`}
+      style={style}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoingTasks, onNavigate }: Props) {
   const { year, quarter } = getCurrentQuarter()
   const active = projects.filter(p => p.status !== 'cancelled')
 
@@ -82,13 +112,13 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
   const combined    = finRisk * 0.6 + effRisk * 0.4
 
   // Vitals
-  const activeCount = active.filter(p => p.status === 'active').length
+  const activeCount   = active.filter(p => p.status === 'active').length
   const openTaskCount = active
     .filter(p => p.status === 'active')
     .flatMap(p => p.tasks)
     .filter(t => t.status === 'todo' || t.status === 'in_progress').length
 
-  // Top 5 open tasks — project tasks first, then ongoing
+  // Tasks
   const projectTasks = active
     .filter(p => p.status === 'active')
     .flatMap(p =>
@@ -96,22 +126,61 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
         .filter(t => t.status === 'todo' || t.status === 'in_progress')
         .map(t => ({ id: t.id, title: t.title, projectName: p.name, type: 'project' as const }))
     )
-  const ongoingTop = ongoingTasks
-    .map(t => ({ id: t.id, title: t.title, projectName: null, type: 'ongoing' as const }))
+  const ongoingTop = ongoingTasks.map(t => ({ id: t.id, title: t.title, projectName: null, type: 'ongoing' as const }))
   const topTasks = [...projectTasks, ...ongoingTop].slice(0, 5)
 
-  // Next 3 events
   const upcomingEvents = events.slice(0, 3)
+
+  // Onboarding: sparse property detection
+  const isSparse = active.length < 3 && !qRow
+
+  // Chart data — rolling 4 quarters budget vs committed
+  const chartSlots = getRollingQuarters(4)
+  const chartData = chartSlots.map(s => {
+    const row       = quarterlyBudgets.find(r => r.year === s.year && r.quarter === s.quarter)
+    const alloc     = row ? qBudget(row) : 0
+    const slotCommit = active
+      .filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
+      .reduce((sum, p) => sum + p.budget_lines.reduce((a, b) => a + (b.estimated_amount ?? 0), 0), 0)
+    return { label: `Q${s.quarter} ${s.year}`, allocated: alloc, committed: slotCommit }
+  })
+  const hasChartData = chartData.some(d => d.allocated > 0 || d.committed > 0)
 
   return (
     <div className="space-y-8">
 
-      {/* Row 1: risk card + vitals */}
+      {/* Onboarding banner */}
+      {isSparse && (
+        <div className="rounded-xl p-5 space-y-3"
+          style={{ background: 'linear-gradient(135deg, oklch(0.97 0.03 155), oklch(0.99 0.01 85))', border: '1px solid oklch(0.88 0.06 155)' }}>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-zinc-800">Welcome to Parcel — let's get your property set up.</p>
+            <p className="text-sm text-zinc-500 leading-relaxed">
+              Start by having the Agent parse your property listing, then set a few goals and your first quarterly budget.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600">
+              <span style={{ color: SAGE }}>①</span> Paste a Zillow or Redfin link in the Agent chat
+            </span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600">
+              <span style={{ color: SAGE }}>②</span> Set your first goals
+            </span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600">
+              <span style={{ color: SAGE }}>③</span> Set a quarterly budget in Planning
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Row 1: risk card + vitals — all clickable */}
       <div className="grid grid-cols-4 gap-4 items-stretch">
 
-        {/* Risk card */}
-        <div className="rounded-xl p-5 space-y-3 flex flex-col"
-          style={{ backgroundColor: riskBg(combined), border: `1px solid ${riskBorder(combined)}` }}>
+        <ClickableCard
+          onClick={() => onNavigate?.('Planning')}
+          className="rounded-xl p-5 space-y-3 flex flex-col"
+          style={{ backgroundColor: riskBg(combined), border: `1px solid ${riskBorder(combined)}` }}
+        >
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">{quarterLabel(year, quarter)}</p>
             <p className="text-lg font-semibold mt-1" style={{ color: riskTextColor(combined) }}>
@@ -125,31 +194,83 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
             {slotPs.length} project{slotPs.length !== 1 ? 's' : ''}
             {budget > 0 ? ` · ${fmtCurrency(committed)} / ${fmtCurrency(budget)}` : ''}
           </p>
-        </div>
+        </ClickableCard>
 
-        {/* Vital cards */}
-        <div className="rounded-xl border border-zinc-100 bg-white p-5 flex flex-col justify-between">
+        <ClickableCard
+          onClick={() => onNavigate?.('Projects')}
+          className="rounded-xl border border-zinc-100 bg-white p-5 flex flex-col justify-between"
+        >
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Active Projects</p>
           <p className="text-4xl font-display text-zinc-700 mt-2 leading-none">{activeCount}</p>
-        </div>
+        </ClickableCard>
 
-        <div className="rounded-xl border border-zinc-100 bg-white p-5 flex flex-col justify-between">
+        <ClickableCard
+          onClick={() => onNavigate?.('To-Do')}
+          className="rounded-xl border border-zinc-100 bg-white p-5 flex flex-col justify-between"
+        >
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Open Tasks</p>
           <p className="text-4xl font-display text-zinc-700 mt-2 leading-none">{openTaskCount}</p>
-        </div>
+        </ClickableCard>
 
-        <div className="rounded-xl border border-zinc-100 bg-white p-5 flex flex-col justify-between">
+        <ClickableCard
+          onClick={() => onNavigate?.('Planning')}
+          className="rounded-xl border border-zinc-100 bg-white p-5 flex flex-col justify-between"
+        >
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Q Budget</p>
           <p className="text-3xl font-display text-zinc-700 mt-2 leading-none">
             {budget > 0 ? (budget >= 1000 ? `$${Math.round(budget / 1000)}k` : fmtCurrency(budget)) : '—'}
           </p>
-        </div>
+        </ClickableCard>
       </div>
+
+      {/* Chart — budget vs committed by quarter */}
+      {hasChartData && (
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Budget vs. Committed</h2>
+          <div className="rounded-xl border border-zinc-100 bg-white p-5">
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={chartData} barCategoryGap="30%" barGap={3}>
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#a1a1aa' }} axisLine={false} tickLine={false} />
+                <YAxis
+                  tickFormatter={fmt}
+                  tick={{ fontSize: 10, fill: '#a1a1aa' }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={44}
+                />
+                <Tooltip
+                  formatter={(val, name) => [fmtCurrency(Number(val ?? 0)), name === 'allocated' ? 'Allocated' : 'Committed']}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7', boxShadow: 'none' }}
+                  cursor={{ fill: 'oklch(0.97 0 0)' }}
+                />
+                <Bar dataKey="allocated" radius={[3, 3, 0, 0]} maxBarSize={32}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} fill={SAGE_HEX} fillOpacity={0.25} />
+                  ))}
+                </Bar>
+                <Bar dataKey="committed" radius={[3, 3, 0, 0]} maxBarSize={32}>
+                  {chartData.map((entry, i) => (
+                    <Cell key={i} fill={entry.committed > entry.allocated && entry.allocated > 0 ? '#f87171' : SAGE_HEX} fillOpacity={0.85} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="flex items-center gap-4 pt-1 justify-end">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: SAGE_HEX, opacity: 0.25 }} />
+                <span className="text-[10px] text-zinc-400">Allocated</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: SAGE_HEX, opacity: 0.85 }} />
+                <span className="text-[10px] text-zinc-400">Committed</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Row 2: tasks + events */}
       <div className="grid grid-cols-2 gap-6">
-
-        {/* Immediate to-dos */}
         <section className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Up Next</h2>
           {topTasks.length === 0 ? (
@@ -161,12 +282,8 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
                   <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: SAGE }} />
                   <div className="min-w-0">
                     <p className="text-sm text-zinc-700 leading-snug">{t.title}</p>
-                    {t.projectName && (
-                      <p className="text-xs text-zinc-400 mt-0.5">{t.projectName}</p>
-                    )}
-                    {t.type === 'ongoing' && (
-                      <p className="text-xs text-zinc-400 mt-0.5">Ongoing</p>
-                    )}
+                    {t.projectName && <p className="text-xs text-zinc-400 mt-0.5">{t.projectName}</p>}
+                    {t.type === 'ongoing' && <p className="text-xs text-zinc-400 mt-0.5">Ongoing</p>}
                   </div>
                 </li>
               ))}
@@ -174,7 +291,6 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
           )}
         </section>
 
-        {/* Upcoming timeline events */}
         <section className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Upcoming</h2>
           {upcomingEvents.length === 0 ? (
@@ -192,15 +308,13 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
         </section>
       </div>
 
-      {/* Row 3: Goals */}
+      {/* Goals */}
       {goals.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Goals</h2>
           <div className="space-y-3">
             {goals.map(g => {
-              const total    = g.totalProjects
-              const complete = g.completeProjects
-              const pct      = total > 0 ? complete / total : 0
+              const pct = g.totalProjects > 0 ? g.completeProjects / g.totalProjects : 0
               return (
                 <div key={g.id} className="flex items-center gap-4">
                   <div className="w-40 shrink-0">
@@ -211,7 +325,7 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
                       style={{ width: `${Math.round(pct * 100)}%`, backgroundColor: SAGE }} />
                   </div>
                   <p className="text-xs text-zinc-400 w-28 shrink-0 text-right">
-                    {complete} of {total} project{total !== 1 ? 's' : ''} done
+                    {g.completeProjects} of {g.totalProjects} project{g.totalProjects !== 1 ? 's' : ''} done
                   </p>
                 </div>
               )
@@ -219,7 +333,6 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
           </div>
         </section>
       )}
-
     </div>
   )
 }

@@ -49,29 +49,29 @@ export default function LoginPage() {
           {/* Outer contour layers — land parcel / topo survey aesthetic */}
           <g fill="none" stroke="white">
             {/* Large irregular terrain shapes */}
-            <path strokeWidth="0.8" strokeOpacity="0.10"
+            <path strokeWidth="0.8" strokeOpacity="0.34"
               d="M -60 720 C 80 680 200 560 310 480 C 420 400 540 380 640 420 C 720 450 740 560 700 660 C 660 760 560 820 420 840 C 280 860 100 820 0 770 Z" />
-            <path strokeWidth="0.8" strokeOpacity="0.13"
+            <path strokeWidth="0.8" strokeOpacity="0.24"
               d="M -20 680 C 100 640 220 530 320 460 C 420 390 530 372 620 406 C 690 432 710 530 675 622 C 638 716 548 768 418 788 C 288 808 120 774 30 732 Z" />
-            <path strokeWidth="0.8" strokeOpacity="0.16"
+            <path strokeWidth="0.8" strokeOpacity="0.30"
               d="M 20 640 C 130 602 238 500 330 440 C 422 380 522 364 602 394 C 665 416 682 504 650 586 C 616 670 534 716 414 736 C 294 756 138 728 60 694 Z" />
-            <path strokeWidth="0.8" strokeOpacity="0.19"
+            <path strokeWidth="0.8" strokeOpacity="0.36"
               d="M 60 600 C 158 564 255 470 340 420 C 424 370 514 356 584 382 C 640 402 654 478 625 550 C 594 624 519 666 410 684 C 300 702 156 678 88 654 Z" />
-            <path strokeWidth="0.9" strokeOpacity="0.22"
+            <path strokeWidth="0.9" strokeOpacity="0.42"
               d="M 100 560 C 186 526 271 440 350 398 C 426 358 506 347 566 370 C 615 388 627 454 600 516 C 572 580 504 618 406 634 C 306 650 174 630 116 610 Z" />
-            <path strokeWidth="0.9" strokeOpacity="0.18"
+            <path strokeWidth="0.9" strokeOpacity="0.34"
               d="M 140 520 C 214 488 288 410 360 375 C 428 342 498 334 548 355 C 590 372 600 430 575 483 C 549 538 488 572 400 586 C 312 600 190 580 144 564 Z" />
 
             {/* Upper ridge group */}
-            <path strokeWidth="0.7" strokeOpacity="0.10"
+            <path strokeWidth="0.7" strokeOpacity="0.34"
               d="M 80 280 C 160 220 280 180 380 190 C 460 198 520 240 540 300 C 556 348 530 400 480 430 C 420 464 340 468 260 450 C 180 432 110 388 88 340 Z" />
             <path strokeWidth="0.8" strokeOpacity="0.14"
               d="M 110 290 C 183 236 292 200 382 210 C 455 218 510 256 528 310 C 542 354 518 400 472 428 C 416 458 342 462 266 446 C 190 430 124 390 104 346 Z" />
-            <path strokeWidth="0.8" strokeOpacity="0.18"
+            <path strokeWidth="0.8" strokeOpacity="0.34"
               d="M 140 300 C 206 252 304 220 385 230 C 450 238 500 272 516 320 C 528 360 506 402 462 426 C 412 453 343 456 271 441 C 200 428 138 392 120 352 Z" />
-            <path strokeWidth="0.9" strokeOpacity="0.22"
+            <path strokeWidth="0.9" strokeOpacity="0.42"
               d="M 168 312 C 228 268 316 240 387 250 C 446 258 490 288 504 330 C 514 366 495 403 453 424 C 408 447 343 450 277 436 C 210 424 152 394 136 358 Z" />
-            <path strokeWidth="0.9" strokeOpacity="0.20"
+            <path strokeWidth="0.9" strokeOpacity="0.38"
               d="M 194 324 C 250 284 328 260 390 270 C 442 278 480 304 492 340 C 501 372 484 405 445 422 C 403 442 345 444 283 432 C 220 420 166 396 152 364 Z" />
 
             {/* Property boundary lines — straight survey marks */}
@@ -89,36 +89,36 @@ export default function LoginPage() {
             <circle cx="320" cy="375" r="2" fill="white" fillOpacity="0.18" />
 
             {/* Subtle elevation tick marks */}
-            <line x1="210" y1="185" x2="210" y2="200" strokeWidth="0.7" strokeOpacity="0.18" />
-            <line x1="465" y1="207" x2="465" y2="222" strokeWidth="0.7" strokeOpacity="0.18" />
-            <line x1="185" y1="528" x2="185" y2="543" strokeWidth="0.7" strokeOpacity="0.18" />
+            <line x1="210" y1="185" x2="210" y2="200" strokeWidth="0.7" strokeOpacity="0.34" />
+            <line x1="465" y1="207" x2="465" y2="222" strokeWidth="0.7" strokeOpacity="0.34" />
+            <line x1="185" y1="528" x2="185" y2="543" strokeWidth="0.7" strokeOpacity="0.34" />
             <line x1="469" y1="541" x2="469" y2="556" strokeWidth="0.7" strokeOpacity="0.15" />
           </g>
         </svg>
 
         {/* Brand wordmark + tagline */}
-        <div className="relative z-10 space-y-2">
+        <div className="relative z-10 space-y-3">
           <p
-            className="font-display text-4xl font-normal tracking-tight"
-            style={{ color: 'rgba(255,255,255,0.97)' }}
+            className="font-display tracking-tight leading-none"
+            style={{ color: 'rgba(255,255,255,0.97)', fontSize: '72px', fontWeight: 300 }}
           >
             Parcel
           </p>
           <p
-            className="text-[15px]"
-            style={{ color: 'rgba(255,255,255,0.65)' }}
+            className="text-base"
+            style={{ color: 'rgba(255,255,255,0.60)' }}
           >
-            Your home, thoughtfully engineered.
+            Your home, thoughtfully managed.
           </p>
         </div>
 
-        {/* Bottom spacer copy */}
-        <div className="relative z-10">
-          <p
-            className="text-xs tracking-widest uppercase"
-            style={{ color: 'rgba(255,255,255,0.30)' }}
-          >
-            Property intelligence
+        {/* Bottom survey data */}
+        <div className="relative z-10 space-y-2">
+          <p className="text-[11px] font-mono tracking-widest" style={{ color: 'rgba(255,255,255,0.28)' }}>
+            40.4233° N &nbsp; 75.0551° W
+          </p>
+          <p className="text-[11px] tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.20)' }}>
+            5.3 ac · Bucks County, PA
           </p>
         </div>
       </div>

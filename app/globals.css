@@ -135,7 +135,9 @@
 
 @layer utilities {
   .font-display {
-    font-family: var(--font-display), Georgia, serif;
+    font-family: var(--font-display), system-ui, sans-serif;
+    font-weight: 300;
+    letter-spacing: -0.01em;
   }
   /* Warm body-text color — only overrides the text utility, not bg/border */
   .text-zinc-900 {

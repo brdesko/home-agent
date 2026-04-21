@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
+import { Geist, Geist_Mono, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { getPropertyId } from "@/lib/get-property-id";
@@ -7,7 +7,7 @@ import { AppShell } from "@/components/app-shell";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-const playfair  = Playfair_Display({ variable: "--font-display", subsets: ["latin"], display: "swap" });
+const dmSans    = DM_Sans({ variable: "--font-display", subsets: ["latin"], display: "swap", weight: ["300","400","500","600","700"] });
 
 export const metadata: Metadata = {
   title: "Parcel",
@@ -51,7 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} h-full antialiased`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${dmSans.variable} h-full antialiased`}>
       <body className="h-full">
         <AppShell
           user={user ? { email: user.email ?? '' } : null}

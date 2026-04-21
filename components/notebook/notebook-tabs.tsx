@@ -71,6 +71,7 @@ export function NotebookTabs({ projects, events, goals, quarterlyBudgets, ongoin
               goals={goals}
               quarterlyBudgets={quarterlyBudgets}
               ongoingTasks={ongoingTasks}
+              onNavigate={(t) => setTab(t as Tab)}
             />
           )}
           {tab === 'To-Do' && (
