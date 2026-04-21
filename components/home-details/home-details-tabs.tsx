@@ -36,21 +36,35 @@ export function HomeDetailsTabs({ property, docs, assets, isOwner }: Props) {
   return (
     <div>
       <div className="border-b border-zinc-200 px-6">
-        <div className="max-w-4xl mx-auto flex gap-0">
-          {TABS.map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                tab === t ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'
-              }`}>
-              {t}
-              {t === 'Documents' && docs.length > 0 && (
-                <span className="ml-1.5 text-xs text-zinc-400">{docs.length}</span>
-              )}
-              {t === 'Assets' && assets.length > 0 && (
-                <span className="ml-1.5 text-xs text-zinc-400">{assets.length}</span>
-              )}
-            </button>
-          ))}
+        <div className="max-w-4xl mx-auto flex gap-0 items-end">
+          {TABS.map((t, i) => {
+            const isPrimary = t === 'Visual' || t === 'Assets'
+            const isActive  = tab === t
+            const showDivider = t === 'Photos' // separator before admin group
+            return (
+              <div key={t} className="flex items-end">
+                {showDivider && <div className="w-px h-5 bg-zinc-200 mx-1 mb-3 self-center shrink-0" />}
+                <button
+                  onClick={() => setTab(t)}
+                  className={`px-4 py-3 transition-colors border-b-2 -mb-px whitespace-nowrap ${
+                    isActive
+                      ? 'border-zinc-900 text-zinc-900 text-sm font-semibold'
+                      : isPrimary
+                      ? 'border-transparent text-zinc-600 text-sm font-medium hover:text-zinc-800'
+                      : 'border-transparent text-zinc-400 text-sm font-normal hover:text-zinc-600'
+                  }`}
+                >
+                  {t}
+                  {t === 'Documents' && docs.length > 0 && (
+                    <span className="ml-1.5 text-xs text-zinc-400">{docs.length}</span>
+                  )}
+                  {t === 'Assets' && assets.length > 0 && (
+                    <span className="ml-1.5 text-xs text-zinc-400">{assets.length}</span>
+                  )}
+                </button>
+              </div>
+            )
+          })}
         </div>
       </div>
 
