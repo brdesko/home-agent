@@ -155,33 +155,47 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
 
       {/* Onboarding banner */}
       {isSparse && (
-        <div className="rounded-xl p-5 space-y-3"
+        <div className="rounded-xl overflow-hidden"
           style={{ background: 'linear-gradient(135deg, oklch(0.97 0.03 155), oklch(0.99 0.01 85))', border: '1px solid oklch(0.88 0.06 155)' }}>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-zinc-800">Welcome to Parcel — let's get your property set up.</p>
-            <p className="text-sm text-zinc-500 leading-relaxed">
-              Start by having the Agent parse your property listing, then set a few goals and your first quarterly budget.
+
+          {/* What Parcel is */}
+          <div className="px-5 pt-5 pb-4 space-y-2 border-b" style={{ borderColor: 'oklch(0.88 0.06 155)' }}>
+            <p className="text-base font-semibold text-zinc-800 leading-snug">Welcome to Parcel.</p>
+            <p className="text-sm leading-relaxed" style={{ color: 'oklch(0.48 0.015 75)' }}>
+              Parcel is your property's notebook and thinking partner. Track projects, budgets, and timelines in one place — then talk to your Agent to plan what's next, work through tradeoffs, or just think out loud about your home.
             </p>
+            <button
+              onClick={() => openChatWith("Can you give me a quick walkthrough of what Parcel can do? I'm just getting started and want to understand how to use it well.")}
+              className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors mt-1"
+              style={{ color: SAGE }}
+            >
+              Ask the Agent for a walkthrough →
+            </button>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <button
-              onClick={() => openChatWith("I just set up a new property and want to get started. Here's my Zillow or Redfin listing — can you help me parse it and understand what I have?")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600 hover:bg-white/90 transition-colors text-left"
-            >
-              <span style={{ color: SAGE }}>①</span> Paste a Zillow or Redfin link in the Agent chat
-            </button>
-            <button
-              onClick={() => openChatWith("I want to set my first goals for this property. Can you help me think through what goals make sense for a new homeowner?")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600 hover:bg-white/90 transition-colors text-left"
-            >
-              <span style={{ color: SAGE }}>②</span> Set your first goals
-            </button>
-            <button
-              onClick={() => openChatWith("I need to set my first quarterly budget for this property. Can you help me figure out what income, expenses, and home improvement allocation makes sense?")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600 hover:bg-white/90 transition-colors text-left"
-            >
-              <span style={{ color: SAGE }}>③</span> Set a quarterly budget in Planning
-            </button>
+
+          {/* Setup steps */}
+          <div className="px-5 py-4 space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'oklch(0.58 0.08 155)' }}>Get started</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => openChatWith("I just set up a new property and want to get started. Here's my Zillow or Redfin listing — can you help me parse it and understand what I have?")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600 hover:bg-white/90 transition-colors text-xs text-left"
+              >
+                <span style={{ color: SAGE }}>①</span> Share your property listing
+              </button>
+              <button
+                onClick={() => openChatWith("I want to set my first goals for this property. Can you help me think through what goals make sense for a new homeowner?")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600 hover:bg-white/90 transition-colors text-xs text-left"
+              >
+                <span style={{ color: SAGE }}>②</span> Set your first goals
+              </button>
+              <button
+                onClick={() => openChatWith("I need to set my first quarterly budget for this property. Can you help me figure out what income, expenses, and home improvement allocation makes sense?")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600 hover:bg-white/90 transition-colors text-xs text-left"
+              >
+                <span style={{ color: SAGE }}>③</span> Set a quarterly budget
+              </button>
+            </div>
           </div>
         </div>
       )}
