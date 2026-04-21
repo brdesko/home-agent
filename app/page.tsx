@@ -141,7 +141,9 @@ export default async function HomePage() {
   const activeCount    = projects.filter(p => p.status === 'active').length
   const openTaskCount  = projects.filter(p => p.status === 'active').flatMap(p => p.tasks).filter(t => t.status === 'todo' || t.status === 'in_progress').length
   const currentQB      = quarterlyBudgets.find(b => b.year === currentYear && b.quarter === currentQuarter)
-  const budgetedThisQuarter = currentQB?.allocated ?? null
+  const budgetedThisQuarter = currentQB
+    ? Math.round((currentQB.core_income + currentQB.additional_income - currentQB.core_expenses - currentQB.additional_expenses) * currentQB.allocation_pct) / 100
+    : null
 
   return (
     <div className="flex-1 overflow-y-auto">

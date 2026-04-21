@@ -9,13 +9,13 @@ import SignOutButton from './sign-out-button'
 const SIDEBAR_BG = 'oklch(0.16 0.012 80)'
 const SAGE       = 'oklch(0.50 0.10 155)'
 
-const NAV = [
-  { href: '/',             label: 'Notebook',    icon: BookOpen },
-  { href: '/agent',        label: 'Agent',       icon: MessageSquare, primary: true },
+const NAV: { href: string; label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; primary?: boolean }[] = [
+  { href: '/',             label: 'Notebook',     icon: BookOpen },
+  { href: '/agent',        label: 'Agent',        icon: MessageSquare, primary: true },
   { href: '/home-details', label: 'Home Details', icon: Home },
-  { href: '/references',   label: 'References',  icon: Bookmark },
-  { href: '/purchases',    label: 'Purchases',   icon: ShoppingBag },
-] as const
+  { href: '/references',   label: 'References',   icon: Bookmark },
+  { href: '/purchases',    label: 'Purchases',    icon: ShoppingBag },
+]
 
 type PropertyEntry = { id: string; name: string }
 

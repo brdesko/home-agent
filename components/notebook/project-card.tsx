@@ -48,8 +48,7 @@ const PRIORITY_DOT: Record<string, string> = {
 
 export function ProjectCard({ project, isOwner }: { project: Project; isOwner: boolean }) {
   const estimated = project.budget_lines
-    .filter(b => b.line_type === 'estimated')
-    .reduce((sum, b) => sum + b.amount, 0)
+    .reduce((sum, b) => sum + (b.estimated_amount ?? 0), 0)
 
   return (
     <div className="border border-zinc-200 rounded-lg p-4 space-y-3">

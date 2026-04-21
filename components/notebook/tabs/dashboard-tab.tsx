@@ -13,6 +13,8 @@ type GoalWithProgress = Goal & {
   totalProjects: number
   activeProjects: number
   completeProjects: number
+  estimatedSpend: number
+  actualSpend: number
 }
 
 type Props = {

@@ -56,8 +56,8 @@ export function GoalsPanel({ goals }: { goals: GoalWithProgress[] }) {
                   </div>
                   <div className="h-1 bg-zinc-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all" style={{ backgroundColor: 'var(--sage)' }}
-                      style={{ width: `${Math.round((goal.completeProjects / goal.totalProjects) * 100)}%` }}
+                      className="h-full rounded-full transition-all"
+                      style={{ backgroundColor: 'var(--sage)', width: `${Math.round((goal.completeProjects / goal.totalProjects) * 100)}%` }}
                     />
                   </div>
                 </div>

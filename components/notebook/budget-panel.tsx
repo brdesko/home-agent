@@ -5,8 +5,7 @@ export function BudgetPanel({ projects }: { projects: Project[] }) {
     .map(p => ({
       name:      p.name,
       estimated: p.budget_lines
-        .filter(b => b.line_type === 'estimated')
-        .reduce((sum, b) => sum + b.amount, 0),
+        .reduce((sum, b) => sum + (b.estimated_amount ?? 0), 0),
     }))
     .filter(p => p.estimated > 0)
 

@@ -35,7 +35,7 @@ function quarterBudget(q: QuarterlyBudget): number {
 
 function estimatedSpend(projects: Project[]): number {
   return projects.reduce((sum, p) =>
-    sum + p.budget_lines.filter(b => b.line_type === 'estimated').reduce((s, b) => s + b.amount, 0)
+    sum + p.budget_lines.reduce((s, b) => s + (b.estimated_amount ?? 0), 0)
   , 0)
 }
 
@@ -292,8 +292,7 @@ function PlanningTab({ quarters: budgetRows, projects }: { quarters: QuarterlyBu
                       <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all ${surplus !== null && surplus < 0 ? 'bg-red-400' : ''}`}
-                          style={surplus !== null && surplus < 0 ? undefined : { backgroundColor: 'var(--sage)' }}
-                          style={{ width: `${Math.min(100, available > 0 ? (committed / available) * 100 : 100)}%` }}
+                          style={{ width: `${Math.min(100, available > 0 ? (committed / available) * 100 : 100)}%`, ...(surplus !== null && surplus < 0 ? {} : { backgroundColor: 'var(--sage)' }) }}
                         />
                       </div>
                     )}
