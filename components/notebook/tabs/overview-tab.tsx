@@ -244,7 +244,7 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
               <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">{quarterLabel(year, quarter)}</p>
               <div className="relative group">
                 <Info className="w-3 h-3 cursor-help" style={{ color: 'oklch(0.65 0 0)' }} />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2.5 rounded-lg text-xs leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg"
+                <div className="absolute bottom-full left-0 mb-2 w-52 p-2.5 rounded-lg text-xs leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg"
                   style={{ backgroundColor: 'oklch(0.18 0.012 80)', color: 'oklch(1 0 0 / 0.75)' }}>
                   Risk blends financial exposure (60%) and effort load (40%). Green &lt;40%, amber &lt;65%, orange &lt;85%, red above.
                 </div>

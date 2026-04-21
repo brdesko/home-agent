@@ -188,31 +188,39 @@ function TaskRow({
 
   return (
     <li className="border border-zinc-100 rounded-lg overflow-hidden">
-      <button
-        onClick={() => setExpanded(e => !e)}
-        className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-zinc-50 transition-colors"
-      >
+      <div className="flex items-center">
+        {/* Checkbox — sibling to expand trigger, never nested inside it */}
         {task.category === 'project' ? (
           <button
             onClick={handleComplete}
-            className="w-5 h-5 rounded border-2 border-zinc-300 flex items-center justify-center shrink-0 hover:border-zinc-400 transition-colors"
+            className="pl-4 pr-2 py-3 shrink-0 flex items-center"
             title="Mark complete"
-          />
+          >
+            <span className="w-5 h-5 rounded border-2 border-zinc-300 flex items-center justify-center hover:border-zinc-400 transition-colors" />
+          </button>
         ) : (
-          <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-300" />
+          <span className="pl-4 pr-2 py-3 flex items-center shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+          </span>
         )}
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${CATEGORY_BADGE[task.category]}`}>
-          {CATEGORY_LABEL[task.category]}
-        </span>
-        <span className="flex-1 text-sm text-zinc-600">{task.title}</span>
-        {task.projectName && (
-          <span className="text-xs text-zinc-400 shrink-0 hidden sm:block">{task.projectName}</span>
-        )}
-        {task.due_date && (
-          <span className="text-xs text-zinc-400 shrink-0">{shortDate(task.due_date)}</span>
-        )}
-        <span className={`text-zinc-300 text-xs shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}>▼</span>
-      </button>
+        {/* Expand trigger */}
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="flex-1 text-left pr-4 py-3 flex items-center gap-3 hover:bg-zinc-50 transition-colors min-w-0"
+        >
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${CATEGORY_BADGE[task.category]}`}>
+            {CATEGORY_LABEL[task.category]}
+          </span>
+          <span className="flex-1 text-sm text-zinc-600 truncate">{task.title}</span>
+          {task.projectName && (
+            <span className="text-xs text-zinc-400 shrink-0 hidden sm:block">{task.projectName}</span>
+          )}
+          {task.due_date && (
+            <span className="text-xs text-zinc-400 shrink-0">{shortDate(task.due_date)}</span>
+          )}
+          <span className={`text-zinc-300 text-xs shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}>▼</span>
+        </button>
+      </div>
 
       <div className={`overflow-hidden transition-all duration-200 ease-out ${expanded ? 'max-h-80' : 'max-h-0'}`}>
         <div className="px-4 pb-4 pt-1 border-t border-zinc-100">
