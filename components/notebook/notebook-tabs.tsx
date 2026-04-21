@@ -33,8 +33,9 @@ type Props = {
 const TABS = ['Overview', 'To-Do', 'Calendar', 'Projects', 'Planning'] as const
 type Tab = typeof TABS[number]
 
-export function NotebookTabs({ projects, events, goals, quarterlyBudgets, ongoingTasks, calendarEvents, isOwner }: Props) {
+export function NotebookTabs({ projects, events, goals, quarterlyBudgets: initialBudgets, ongoingTasks, calendarEvents, isOwner }: Props) {
   const [tab, setTab] = useState<Tab>('Overview')
+  const [quarterlyBudgets, setQuarterlyBudgets] = useState(initialBudgets)
 
   return (
     <div>
@@ -81,7 +82,7 @@ export function NotebookTabs({ projects, events, goals, quarterlyBudgets, ongoin
             <ProjectManagementTab projects={projects} goals={goals} isOwner={isOwner} />
           )}
           {tab === 'Planning' && (
-            <DashboardTab goals={goals} projects={projects} quarters={quarterlyBudgets} isOwner={isOwner} />
+            <DashboardTab goals={goals} projects={projects} quarters={quarterlyBudgets} isOwner={isOwner} onQuartersChange={setQuarterlyBudgets} />
           )}
         </div>
       )}

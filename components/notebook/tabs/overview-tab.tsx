@@ -134,6 +134,10 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
   // Onboarding: sparse property detection
   const isSparse = active.length < 3 && !qRow
 
+  function openChatWith(message: string) {
+    window.dispatchEvent(new CustomEvent('parcel:open-chat', { detail: { message } }))
+  }
+
   // Chart data — rolling 4 quarters budget vs committed
   const chartSlots = getRollingQuarters(4)
   const chartData = chartSlots.map(s => {
@@ -160,15 +164,24 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600">
+            <button
+              onClick={() => openChatWith("I just set up a new property and want to get started. Here's my Zillow or Redfin listing — can you help me parse it and understand what I have?")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600 hover:bg-white/90 transition-colors text-left"
+            >
               <span style={{ color: SAGE }}>①</span> Paste a Zillow or Redfin link in the Agent chat
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600">
+            </button>
+            <button
+              onClick={() => openChatWith("I want to set my first goals for this property. Can you help me think through what goals make sense for a new homeowner?")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600 hover:bg-white/90 transition-colors text-left"
+            >
               <span style={{ color: SAGE }}>②</span> Set your first goals
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600">
+            </button>
+            <button
+              onClick={() => openChatWith("I need to set my first quarterly budget for this property. Can you help me figure out what income, expenses, and home improvement allocation makes sense?")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-zinc-200 text-zinc-600 hover:bg-white/90 transition-colors text-left"
+            >
               <span style={{ color: SAGE }}>③</span> Set a quarterly budget in Planning
-            </span>
+            </button>
           </div>
         </div>
       )}

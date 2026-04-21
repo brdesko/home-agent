@@ -22,6 +22,7 @@ type Props = {
   projects: (Project & { goal_id: string | null })[]
   quarters: QuarterlyBudget[]
   isOwner: boolean
+  onQuartersChange?: (rows: QuarterlyBudget[]) => void
 }
 
 const EFFORT_SCORE: Record<string, number> = { low: 1, medium: 2, high: 3, very_high: 4 }
@@ -77,7 +78,7 @@ function riskBarColor(risk: number): string {
 const SUB_TABS = ['Financial Budget', 'Effort Budget', 'Goals'] as const
 type SubTab = typeof SUB_TABS[number]
 
-export function DashboardTab({ goals, projects, quarters, isOwner }: Props) {
+export function DashboardTab({ goals, projects, quarters, isOwner, onQuartersChange }: Props) {
   const [sub, setSub] = useState<SubTab>('Financial Budget')
 
   const slots  = getRollingQuarters(4)
@@ -134,7 +135,7 @@ export function DashboardTab({ goals, projects, quarters, isOwner }: Props) {
             </button>
           ))}
         </div>
-        {sub === 'Financial Budget' && <FinancialBudgetTab quarters={quarters} projects={projects} isOwner={isOwner} />}
+        {sub === 'Financial Budget' && <FinancialBudgetTab quarters={quarters} projects={projects} isOwner={isOwner} onQuartersChange={onQuartersChange} />}
         {sub === 'Effort Budget'    && <EffortBudgetTab projects={projects} />}
         {sub === 'Goals'            && <GoalsTab goals={goals} projects={projects} />}
       </section>

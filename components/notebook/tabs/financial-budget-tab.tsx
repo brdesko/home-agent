@@ -34,9 +34,10 @@ type Props = {
   quarters: QuarterlyBudget[]
   projects: (Project & { goal_id: string | null })[]
   isOwner: boolean
+  onQuartersChange?: (rows: QuarterlyBudget[]) => void
 }
 
-export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Props) {
+export function FinancialBudgetTab({ quarters: initial, projects, isOwner, onQuartersChange }: Props) {
   const [rows, setRows] = useState<QuarterlyBudget[]>(initial)
   const [saving, setSaving] = useState<string | null>(null)
   const [expandedCalc, setExpandedCalc] = useState<string | null>(null)
@@ -155,9 +156,14 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
       })
       if (res.ok) {
         const saved = await res.json()
-        setRows(prev => prev.find(r => r.year === year && r.quarter === quarter)
-          ? prev.map(r => r.year === year && r.quarter === quarter ? saved : r)
-          : [...prev, saved])
+        let updatedRows: QuarterlyBudget[] = rows
+        setRows(prev => {
+          updatedRows = prev.find(r => r.year === year && r.quarter === quarter)
+            ? prev.map(r => r.year === year && r.quarter === quarter ? saved : r)
+            : [...prev, saved]
+          return updatedRows
+        })
+        onQuartersChange?.(updatedRows)
       }
     } finally { setSaving(null) }
   }

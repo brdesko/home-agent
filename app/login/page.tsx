@@ -38,7 +38,7 @@ export default function LoginPage() {
         className="hidden md:flex flex-col justify-between w-[55%] relative overflow-hidden p-14"
         style={{ backgroundColor: 'oklch(0.50 0.10 155)' }}
       >
-        {/* Plat-map / cadastral survey SVG background */}
+        {/* Site-plan illustration — artwork lives in the lower two-thirds, title area stays clear */}
         <svg
           aria-hidden="true"
           className="absolute inset-0 w-full h-full"
@@ -46,64 +46,91 @@ export default function LoginPage() {
           preserveAspectRatio="xMidYMid slice"
           xmlns="http://www.w3.org/2000/svg"
         >
+          {/* Dot grid — full background, very faint */}
+          <g fill="white" stroke="none">
+            {Array.from({ length: 56 }, (_, i) => {
+              const col = i % 8
+              const row = Math.floor(i / 8)
+              return <circle key={i} cx={30 + col * 86} cy={40 + row * 130} r="1.5" fillOpacity="0.07" />
+            })}
+          </g>
+
           <g fill="none" stroke="white">
-            {/* Main parcel boundary — irregular polygon, clearly land-survey */}
+            {/* Road / street edge — enters from bottom-left */}
+            <path d="M 0 820 Q 50 790 80 750" strokeWidth="3" strokeOpacity="0.10" />
+            <path d="M 0 840 Q 52 808 82 768" strokeWidth="1" strokeOpacity="0.08" strokeDasharray="8 6" />
+
+            {/* Property boundary — kept in lower 65% of canvas */}
             <polygon
-              points="80,110 560,80 620,420 580,760 420,840 100,810 50,480 80,110"
-              strokeWidth="1.2" strokeOpacity="0.35"
+              points="82,340 490,295 595,500 545,760 225,810 68,660"
+              strokeWidth="1.3" strokeOpacity="0.38"
             />
-            {/* Inner set-back line */}
+            {/* Inner setback — dashed */}
             <polygon
-              points="120,150 520,122 572,420 536,730 420,800 138,772 96,480 120,150"
+              points="108,368 464,326 566,503 518,730 232,778 96,658"
               strokeWidth="0.7" strokeOpacity="0.18" strokeDasharray="6 4"
             />
 
-            {/* Interior subdivision lines */}
-            <line x1="80" y1="110" x2="580" y2="760" strokeWidth="0.6" strokeOpacity="0.16" />
-            <line x1="560" y1="80" x2="100" y2="810" strokeWidth="0.6" strokeOpacity="0.16" />
-            <line x1="50" y1="480" x2="620" y2="420" strokeWidth="0.6" strokeOpacity="0.20" />
+            {/* House footprint */}
+            <rect x="195" y="440" width="178" height="138" rx="3"
+              strokeWidth="1.3" strokeOpacity="0.52" />
+            {/* Center ridge line (long axis of house) */}
+            <line x1="284" y1="440" x2="284" y2="578" strokeWidth="0.7" strokeOpacity="0.22" />
+            {/* Front door opening */}
+            <rect x="262" y="548" width="44" height="30" rx="2"
+              strokeWidth="0.9" strokeOpacity="0.35" />
 
-            {/* Zone fill outlines — house area */}
-            <rect x="200" y="220" width="180" height="140" rx="4"
-              strokeWidth="0.9" strokeOpacity="0.30" />
-            {/* Zone fill outlines — barn area */}
-            <rect x="90" y="480" width="140" height="100" rx="4"
-              strokeWidth="0.9" strokeOpacity="0.25" />
-            {/* Zone fill outlines — pool */}
-            <ellipse cx="490" cy="300" rx="55" ry="38"
-              strokeWidth="0.9" strokeOpacity="0.25" />
+            {/* Driveway — curves from street gap to house */}
+            <path d="M 82 680 C 100 660 140 610 195 560"
+              strokeWidth="1.1" strokeOpacity="0.22" />
 
-            {/* Bearing / dimension annotation lines */}
-            <line x1="80" y1="100" x2="560" y2="70" strokeWidth="0.5" strokeOpacity="0.22" />
-            <line x1="80" y1="92" x2="80" y2="118" strokeWidth="0.8" strokeOpacity="0.30" />
-            <line x1="560" y1="62" x2="560" y2="88" strokeWidth="0.8" strokeOpacity="0.30" />
+            {/* Garden bed alongside house */}
+            <rect x="195" y="596" width="70" height="22" rx="3"
+              strokeWidth="0.8" strokeOpacity="0.22" />
+            <rect x="280" y="596" width="52" height="22" rx="3"
+              strokeWidth="0.8" strokeOpacity="0.18" />
 
-            {/* Corner pins */}
-            <circle cx="80"  cy="110" r="4" fill="white" fillOpacity="0.22" />
-            <circle cx="560" cy="80"  r="4" fill="white" fillOpacity="0.22" />
-            <circle cx="620" cy="420" r="4" fill="white" fillOpacity="0.20" />
-            <circle cx="580" cy="760" r="4" fill="white" fillOpacity="0.20" />
-            <circle cx="420" cy="840" r="4" fill="white" fillOpacity="0.20" />
-            <circle cx="100" cy="810" r="4" fill="white" fillOpacity="0.20" />
-            <circle cx="50"  cy="480" r="4" fill="white" fillOpacity="0.20" />
+            {/* Pond / water feature — lower right of parcel */}
+            <ellipse cx="468" cy="638" rx="54" ry="36"
+              strokeWidth="1.0" strokeOpacity="0.24" />
+            <ellipse cx="468" cy="638" rx="36" ry="24"
+              strokeWidth="0.5" strokeOpacity="0.12" />
 
-            {/* Tick marks at corners */}
-            <line x1="72"  y1="110" x2="88"  y2="110" strokeWidth="0.8" strokeOpacity="0.28" />
-            <line x1="80"  y1="102" x2="80"  y2="118" strokeWidth="0.8" strokeOpacity="0.28" />
-            <line x1="552" y1="80"  x2="568" y2="80"  strokeWidth="0.8" strokeOpacity="0.28" />
-            <line x1="560" y1="72"  x2="560" y2="88"  strokeWidth="0.8" strokeOpacity="0.28" />
+            {/* Tree clusters */}
+            {/* Upper right — three overlapping canopies */}
+            <circle cx="462" cy="380" r="20" strokeWidth="0.9" strokeOpacity="0.24" />
+            <circle cx="500" cy="414" r="15" strokeWidth="0.8" strokeOpacity="0.19" />
+            <circle cx="436" cy="418" r="12" strokeWidth="0.7" strokeOpacity="0.16" />
+            {/* Left side — two trees near driveway */}
+            <circle cx="148" cy="490" r="17" strokeWidth="0.9" strokeOpacity="0.21" />
+            <circle cx="138" cy="536" r="13" strokeWidth="0.8" strokeOpacity="0.17" />
+            {/* Lower center */}
+            <circle cx="368" cy="720" r="15" strokeWidth="0.7" strokeOpacity="0.18" />
+            <circle cx="400" cy="704" r="11" strokeWidth="0.6" strokeOpacity="0.14" />
+            <circle cx="384" cy="690" r="8"  strokeWidth="0.5" strokeOpacity="0.12" />
 
-            {/* Contour lines — organic background texture, lower layer */}
-            <path strokeWidth="0.5" strokeOpacity="0.10"
-              d="M 0 600 Q 200 540 400 580 Q 550 610 660 570" />
-            <path strokeWidth="0.5" strokeOpacity="0.10"
-              d="M 0 650 Q 180 600 380 630 Q 540 655 660 620" />
-            <path strokeWidth="0.5" strokeOpacity="0.10"
-              d="M 0 700 Q 200 660 420 680 Q 560 695 660 670" />
-            <path strokeWidth="0.5" strokeOpacity="0.10"
-              d="M 100 200 Q 300 170 480 210 Q 580 230 660 200" />
-            <path strokeWidth="0.5" strokeOpacity="0.10"
-              d="M 60 260 Q 260 230 460 265 Q 570 280 660 255" />
+            {/* Survey corner pins */}
+            <circle cx="82"  cy="340" r="4" fill="white" fillOpacity="0.32" />
+            <circle cx="490" cy="295" r="4" fill="white" fillOpacity="0.28" />
+            <circle cx="595" cy="500" r="4" fill="white" fillOpacity="0.24" />
+            <circle cx="545" cy="760" r="4" fill="white" fillOpacity="0.22" />
+            <circle cx="225" cy="810" r="4" fill="white" fillOpacity="0.22" />
+            <circle cx="68"  cy="660" r="4" fill="white" fillOpacity="0.22" />
+
+            {/* Tick marks at two corners */}
+            <line x1="74"  y1="340" x2="90"  y2="340" strokeWidth="0.8" strokeOpacity="0.26" />
+            <line x1="82"  y1="332" x2="82"  y2="348" strokeWidth="0.8" strokeOpacity="0.26" />
+            <line x1="482" y1="295" x2="498" y2="295" strokeWidth="0.8" strokeOpacity="0.24" />
+            <line x1="490" y1="287" x2="490" y2="303" strokeWidth="0.8" strokeOpacity="0.24" />
+
+            {/* Bearing dimension line — top edge of parcel */}
+            <line x1="82" y1="330" x2="490" y2="284" strokeWidth="0.5" strokeOpacity="0.18" />
+
+            {/* Scale bar — bottom right, outside parcel */}
+            <line x1="490" y1="858" x2="610" y2="858" strokeWidth="0.9" strokeOpacity="0.22" />
+            <line x1="490" y1="852" x2="490" y2="864" strokeWidth="0.9" strokeOpacity="0.22" />
+            <line x1="550" y1="852" x2="550" y2="864" strokeWidth="0.5" strokeOpacity="0.16" />
+            <line x1="610" y1="852" x2="610" y2="864" strokeWidth="0.9" strokeOpacity="0.22" />
           </g>
         </svg>
 

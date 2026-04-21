@@ -23,6 +23,12 @@ export function FloatingChat() {
   const [loading, setLoading] = useState(false)
   const bottomRef             = useRef<HTMLDivElement>(null)
   const inputRef              = useRef<HTMLInputElement>(null)
+  const messagesRef           = useRef<Message[]>(messages)
+  const loadingRef            = useRef(false)
+
+  // Keep refs in sync
+  useEffect(() => { messagesRef.current = messages }, [messages])
+  useEffect(() => { loadingRef.current = loading }, [loading])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -32,13 +38,25 @@ export function FloatingChat() {
     if (open) setTimeout(() => inputRef.current?.focus(), 150)
   }, [open])
 
-  async function send() {
-    const text = draft.trim()
-    if (!text || loading) return
-    const userMsg: Message = { role: 'user', content: text }
-    const next = [...messages, userMsg]
+  // Listen for open-chat events from onboarding banner chips
+  useEffect(() => {
+    function onOpenChat(e: Event) {
+      const detail = (e as CustomEvent<{ message?: string }>).detail
+      setOpen(true)
+      if (detail?.message) {
+        setTimeout(() => sendText(detail.message!), 250)
+      }
+    }
+    window.addEventListener('parcel:open-chat', onOpenChat)
+    return () => window.removeEventListener('parcel:open-chat', onOpenChat)
+  }, [])
+
+  async function sendText(text: string) {
+    if (!text.trim() || loadingRef.current) return
+    const userMsg: Message = { role: 'user', content: text.trim() }
+    const next = [...messagesRef.current, userMsg]
+    messagesRef.current = next
     setMessages(next)
-    setDraft('')
     setLoading(true)
     try {
       const res = await fetch('/api/agent', {
@@ -50,12 +68,27 @@ export function FloatingChat() {
       const reply = typeof data.response === 'string'
         ? data.response
         : data.message ?? 'Something went wrong.'
-      setMessages(m => [...m, { role: 'assistant', content: reply }])
+      setMessages(m => {
+        const updated = [...m, { role: 'assistant' as const, content: reply }]
+        messagesRef.current = updated
+        return updated
+      })
     } catch {
-      setMessages(m => [...m, { role: 'assistant', content: 'Something went wrong — try again.' }])
+      setMessages(m => {
+        const updated = [...m, { role: 'assistant' as const, content: 'Something went wrong — try again.' }]
+        messagesRef.current = updated
+        return updated
+      })
     } finally {
       setLoading(false)
     }
+  }
+
+  async function send() {
+    const text = draft.trim()
+    if (!text) return
+    setDraft('')
+    await sendText(text)
   }
 
   return (
