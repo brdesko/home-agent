@@ -70,59 +70,65 @@ function extractJson(raw: string): unknown {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { path } = await req.json() as { path: string }
-  if (!path) return NextResponse.json({ error: 'path is required' }, { status: 400 })
-
-  // Download the file from Supabase storage
-  const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(path)
-  if (dlErr || !blob) return NextResponse.json({ error: dlErr?.message ?? 'Download failed' }, { status: 500 })
-
-  const arrayBuf = await blob.arrayBuffer()
-  const buffer   = Buffer.from(arrayBuf)
-
-  // Extract text from PDF. Falls back to empty for image-only (scanned) PDFs.
-  let docText = ''
   try {
-    const uint8 = new Uint8Array(arrayBuf)
-    const { text } = await extractText(uint8, { mergePages: true })
-    docText = text.trim()
-  } catch {
-    return NextResponse.json({ error: 'Could not read this PDF. It may be corrupted or password-protected.' }, { status: 422 })
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { path } = await req.json() as { path: string }
+    if (!path) return NextResponse.json({ error: 'path is required' }, { status: 400 })
+
+    // Download the file from Supabase storage
+    const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(path)
+    if (dlErr || !blob) return NextResponse.json({ error: dlErr?.message ?? 'Download failed' }, { status: 500 })
+
+    // Convert to Uint8Array once — avoid creating multiple views of the same ArrayBuffer
+    const uint8 = new Uint8Array(await blob.arrayBuffer())
+
+    // Extract text from PDF. Falls back to empty for image-only (scanned) PDFs.
+    let docText = ''
+    try {
+      const { text } = await extractText(uint8, { mergePages: true })
+      docText = text.trim()
+    } catch (e) {
+      console.error('unpdf extractText failed:', e)
+      return NextResponse.json({ error: `PDF text extraction failed: ${String(e)}` }, { status: 422 })
+    }
+
+    if (!docText) {
+      return NextResponse.json({
+        error: 'This PDF contains no extractable text — it is likely a scanned document (images of pages). Try copying the text manually and using the Paste text option instead.',
+      }, { status: 422 })
+    }
+
+    // Truncate to avoid token limits — 60k chars covers ~15k tokens of input
+    const content = docText.slice(0, 60000)
+
+    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY!,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 8192,
+        messages: [{ role: 'user', content: `Document text:\n\n${content}\n\n${PARSE_PROMPT}` }],
+      }),
+    })
+
+    if (!apiRes.ok) {
+      const errText = await apiRes.text()
+      return NextResponse.json({ error: `Anthropic API error ${apiRes.status}: ${errText.slice(0, 200)}` }, { status: 500 })
+    }
+
+    const result = await apiRes.json() as { content: { type: string; text: string }[] }
+    const raw    = result.content.filter(b => b.type === 'text').map(b => b.text).join('')
+    return NextResponse.json(extractJson(raw))
+
+  } catch (e) {
+    console.error('parse-document unhandled error:', e)
+    return NextResponse.json({ error: `Server error: ${String(e)}` }, { status: 500 })
   }
-
-  if (!docText) {
-    return NextResponse.json({
-      error: 'This PDF contains no extractable text — it is likely a scanned document (images of pages). Try copying the text manually and using the Paste text option instead.',
-    }, { status: 422 })
-  }
-
-  // Truncate to avoid token limits — 60k chars covers ~15k tokens of input
-  const content = docText.slice(0, 60000)
-
-  const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': process.env.ANTHROPIC_API_KEY!,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8192,
-      messages: [{ role: 'user', content: `Document text:\n\n${content}\n\n${PARSE_PROMPT}` }],
-    }),
-  })
-
-  if (!apiRes.ok) {
-    const errText = await apiRes.text()
-    return NextResponse.json({ error: `Anthropic API error ${apiRes.status}: ${errText.slice(0, 200)}` }, { status: 500 })
-  }
-
-  const result = await apiRes.json() as { content: { type: string; text: string }[] }
-  const raw    = result.content.filter(b => b.type === 'text').map(b => b.text).join('')
-  return NextResponse.json(extractJson(raw))
 }
