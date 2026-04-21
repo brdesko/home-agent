@@ -8,7 +8,14 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { property_id } = await req.json()
-  if (!property_id) return NextResponse.json({ error: 'property_id required' }, { status: 400 })
+
+  const cookieStore = await cookies()
+
+  // null clears the cookie (used after archiving the active property)
+  if (!property_id) {
+    cookieStore.delete('parcel_property_id')
+    return NextResponse.json({ ok: true })
+  }
 
   const { data } = await supabase
     .from('property_members')
@@ -19,7 +26,6 @@ export async function POST(req: NextRequest) {
 
   if (!data) return NextResponse.json({ error: 'Not a member of this property' }, { status: 403 })
 
-  const cookieStore = await cookies()
   cookieStore.set('parcel_property_id', property_id, {
     path: '/',
     maxAge: 60 * 60 * 24 * 365,

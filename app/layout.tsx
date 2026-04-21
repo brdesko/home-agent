@@ -27,13 +27,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (user) {
     const { data: memberships } = await supabase
       .from('property_members')
-      .select('properties(id, name)')
+      .select('properties(id, name, is_archived)')
       .eq('user_id', user.id)
       .order('created_at')
 
     allProperties = (memberships ?? [])
-      .map(m => m.properties as unknown as PropertyEntry | null)
-      .filter((p): p is PropertyEntry => !!p)
+      .map(m => m.properties as unknown as (PropertyEntry & { is_archived: boolean }) | null)
+      .filter((p): p is PropertyEntry & { is_archived: boolean } => !!p && !p.is_archived)
 
     currentPropertyId = await getPropertyId(supabase, user.id)
     const current = allProperties.find(p => p.id === currentPropertyId)

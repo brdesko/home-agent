@@ -182,7 +182,14 @@ function PropertyDropdown({ propertyName, propertyId, allProperties, router }: D
         body: JSON.stringify({ is_archived: true }),
       })
       if (!res.ok) { const b = await res.json().catch(() => ({})); setErr(b.error ?? 'Failed'); return }
+      // Clear the cookie so getPropertyId falls back to the next active property
+      await fetch('/api/property/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyId: null }),
+      })
       close()
+      router.push('/')
       router.refresh()
     } catch { setErr('Network error') }
     finally { setBusy(false) }
