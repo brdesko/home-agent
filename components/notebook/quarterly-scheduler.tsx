@@ -37,11 +37,13 @@ export const EFFORT_COLORS: Record<EffortLevel, string | null> = {
 }
 
 const EFFORT_BG: Record<string, string> = {
-  low:       'oklch(0.96 0.03 155)',
-  medium:    'oklch(0.96 0.06 90)',
-  high:      'oklch(0.95 0.06 50)',
-  very_high: 'oklch(0.94 0.07 20)',
+  low:       'oklch(0.92 0.06 155)',
+  medium:    'oklch(0.91 0.10 90)',
+  high:      'oklch(0.90 0.10 50)',
+  very_high: 'oklch(0.88 0.12 20)',
 }
+
+const EFFORT_BG_NONE = 'oklch(0.96 0.00 0)'
 
 const EFFORT_LABEL: Record<string, string> = {
   low: 'Low', medium: 'Med', high: 'High', very_high: 'Very high',
@@ -99,7 +101,7 @@ function DraggableCard({ project }: { project: SchedulerProject }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: project.id })
 
   const domainColor = DOMAIN_COLORS[project.domain] ?? 'oklch(0.60 0.00 0)'
-  const effortBg    = project.effort ? (EFFORT_BG[project.effort] ?? '') : ''
+  const effortBg    = project.effort ? (EFFORT_BG[project.effort] ?? EFFORT_BG_NONE) : EFFORT_BG_NONE
 
   return (
     <div
@@ -109,7 +111,7 @@ function DraggableCard({ project }: { project: SchedulerProject }) {
       style={{
         transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
         borderLeftColor: domainColor,
-        backgroundColor: effortBg || 'white',
+        backgroundColor: effortBg,
         opacity: isDragging ? 0.35 : 1,
         cursor: isDragging ? 'grabbing' : 'grab',
         position: 'relative',
@@ -137,10 +139,10 @@ function DraggableCard({ project }: { project: SchedulerProject }) {
 
 function OverlayCard({ project }: { project: SchedulerProject }) {
   const domainColor = DOMAIN_COLORS[project.domain] ?? 'oklch(0.60 0.00 0)'
-  const effortBg    = project.effort ? (EFFORT_BG[project.effort] ?? '') : ''
+  const effortBg    = project.effort ? (EFFORT_BG[project.effort] ?? EFFORT_BG_NONE) : EFFORT_BG_NONE
   return (
     <div
-      style={{ borderLeftColor: domainColor, backgroundColor: effortBg || 'white' }}
+      style={{ borderLeftColor: domainColor, backgroundColor: effortBg }}
       className="border border-zinc-300 border-l-[3px] rounded-lg px-2.5 py-2 shadow-xl w-[158px] opacity-95 cursor-grabbing"
     >
       <p className="text-xs font-medium text-zinc-800 leading-tight truncate">{project.name}</p>

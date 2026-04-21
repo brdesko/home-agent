@@ -72,8 +72,11 @@ type PanelState =
   | { mode: 'new'; date: string }
   | { mode: 'edit'; event: CalendarEvent }
 
+type SubTab = 'schedule' | 'calendar'
+
 export function CalendarTab({ initialEvents, timelineEvents, projects, quarterlyBudgets }: Props) {
   const now    = new Date()
+  const [subTab, setSubTab] = useState<SubTab>('schedule')
   const [year,  setYear]  = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
@@ -224,147 +227,179 @@ export function CalendarTab({ initialEvents, timelineEvents, projects, quarterly
   const panelOpen = panel.mode !== 'closed'
 
   return (
-    <div className="flex gap-5 min-h-[520px]">
+    <div className="flex flex-col min-h-[520px]">
 
-      {/* ── Left: Quarterly scheduler ── */}
-      <div className="flex-1 min-w-0 flex flex-col" style={{ minWidth: 0, maxWidth: '60%' }}>
-        <QuarterlyScheduler
-          projects={projects}
-          quarterlyBudgets={quarterlyBudgets}
-          pending={pending}
-          effortByKey={effortByKey}
-          onMove={handleMove}
-          onSave={handleSave}
-          onDiscard={handleDiscard}
-        />
+      {/* ── Sub-tab toggle ── */}
+      <div className="flex items-center gap-1 mb-5 bg-zinc-100 rounded-lg p-1 self-start">
+        <button
+          onClick={() => setSubTab('schedule')}
+          className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            subTab === 'schedule'
+              ? 'bg-white text-zinc-800 shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-700'
+          }`}
+        >
+          Schedule
+        </button>
+        <button
+          onClick={() => setSubTab('calendar')}
+          className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+            subTab === 'calendar'
+              ? 'bg-white text-zinc-800 shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-700'
+          }`}
+        >
+          Calendar
+          {pending.size > 0 && subTab !== 'calendar' && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+          )}
+        </button>
       </div>
 
-      {/* ── Right: Calendar ── */}
-      <div className="w-[380px] shrink-0 flex flex-col">
-
-        {/* Month nav */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <h2 className="text-sm font-display text-zinc-800 w-36 text-center">{monthLabel}</h2>
-            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-          <button
-            onClick={() => openNew(todayIso)}
-            className="text-xs font-medium text-white px-2.5 py-1.5 rounded-lg transition-colors"
-            style={{ backgroundColor: SAGE }}
-          >
-            + Add
-          </button>
+      {/* ── Schedule view ── */}
+      {subTab === 'schedule' && (
+        <div className="flex-1 flex flex-col min-h-0" style={{ minHeight: 460 }}>
+          <QuarterlyScheduler
+            projects={projects}
+            quarterlyBudgets={quarterlyBudgets}
+            pending={pending}
+            effortByKey={effortByKey}
+            onMove={handleMove}
+            onSave={handleSave}
+            onDiscard={handleDiscard}
+          />
         </div>
+      )}
 
-        {/* Day headers */}
-        <div className="grid grid-cols-7 mb-0.5">
-          {DAYS.map(d => (
-            <div key={d} className="text-center text-[9px] font-semibold uppercase tracking-widest text-zinc-400 pb-1.5">{d}</div>
-          ))}
-        </div>
+      {/* ── Calendar view ── */}
+      {subTab === 'calendar' && (
+        <div className="flex flex-col max-w-[560px]">
 
-        {/* Grid */}
-        <div className="grid grid-cols-7 border-l border-t border-zinc-100 flex-1">
-          {grid.map((day, i) => {
-            const iso      = isoDate(day)
-            const inMonth  = day.getMonth() === month
-            const isToday  = iso === todayIso
-            const calEvts  = calEventsOnDay(iso)
-            const tlEvts   = tlEventsOnDay(iso)
-
-            // Effort indicator for this day's quarter
-            const dayQ       = Math.ceil((day.getMonth() + 1) / 3)
-            const dayQKey    = `${day.getFullYear()}-${dayQ}`
-            const effortLvl  = effortByKey[dayQKey] ?? 'none'
-            const effortColor = effortLvl !== 'none' ? EFFORT_COLORS[effortLvl] : null
-
-            return (
-              <div
-                key={i}
-                onClick={() => inMonth && openNew(iso)}
-                className={`min-h-[72px] border-r border-b border-zinc-100 p-1 flex flex-col cursor-pointer transition-colors ${
-                  inMonth ? 'hover:bg-zinc-50' : 'bg-zinc-50/40'
-                }`}
-              >
-                {/* Effort strip — thin colored bar at top of cell */}
-                {inMonth && effortColor && (
-                  <div
-                    className="w-full h-[2px] rounded-full mb-1 opacity-70"
-                    style={{ backgroundColor: effortColor }}
-                  />
-                )}
-
-                {/* Day number */}
-                <div className="flex justify-end mb-0.5">
-                  <span className={`text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-medium ${
-                    isToday ? 'text-white' : inMonth ? 'text-zinc-600' : 'text-zinc-300'
-                  }`} style={isToday ? { backgroundColor: SAGE } : {}}>
-                    {day.getDate()}
-                  </span>
-                </div>
-
-                {/* Events */}
-                <div className="flex flex-col gap-0.5 flex-1">
-                  {calEvts.slice(0, 2).map(e => {
-                    const meta = TYPE_META[e.type]
-                    const pos  = bandPosition(e, iso)
-                    const isMultiDay = e.start_date !== e.end_date
-                    return (
-                      <div
-                        key={e.id}
-                        onClick={ev => { ev.stopPropagation(); openEdit(e) }}
-                        className="text-[9px] font-medium leading-tight px-1 py-0.5 truncate cursor-pointer"
-                        style={{
-                          backgroundColor: meta.band,
-                          color: meta.text,
-                          borderRadius: isMultiDay
-                            ? pos === 'start' ? '3px 0 0 3px'
-                            : pos === 'end'   ? '0 3px 3px 0'
-                            : '0' : '3px',
-                          marginLeft:  (isMultiDay && (pos === 'mid' || pos === 'end'))   ? '-4px' : undefined,
-                          marginRight: (isMultiDay && (pos === 'mid' || pos === 'start')) ? '-4px' : undefined,
-                        }}
-                      >
-                        {(pos === 'start' || pos === 'single') ? e.title : '\u00a0'}
-                      </div>
-                    )
-                  })}
-                  {tlEvts.slice(0, 1).map(e => (
-                    <div key={e.id}
-                      className="text-[9px] font-medium leading-tight px-1 py-0.5 truncate rounded"
-                      style={{ backgroundColor: 'oklch(0.93 0.04 155)', color: SAGE }}>
-                      {e.title}
-                    </div>
-                  ))}
-                  {(calEvts.length + tlEvts.length) > 2 && (
-                    <p className="text-[9px] text-zinc-400 px-0.5">+{calEvts.length + tlEvts.length - 2}</p>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-3 pt-3">
-          {Object.entries(TYPE_META).map(([type, meta]) => (
-            <div key={type} className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: meta.band }} />
-              <span className="text-[10px] text-zinc-500">{meta.label}</span>
+          {/* Month nav */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <h2 className="text-sm font-display text-zinc-800 w-36 text-center">{monthLabel}</h2>
+              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-          ))}
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: 'oklch(0.93 0.04 155)' }} />
-            <span className="text-[10px] text-zinc-500">Project event</span>
+            <div className="flex items-center gap-3">
+              {pending.size > 0 && (
+                <span className="text-[11px] text-amber-600 font-medium">{pending.size} schedule change{pending.size !== 1 ? 's' : ''} unsaved</span>
+              )}
+              <button
+                onClick={() => openNew(todayIso)}
+                className="text-xs font-medium text-white px-2.5 py-1.5 rounded-lg transition-colors"
+                style={{ backgroundColor: SAGE }}
+              >
+                + Add
+              </button>
+            </div>
+          </div>
+
+          {/* Day headers */}
+          <div className="grid grid-cols-7 mb-0.5">
+            {DAYS.map(d => (
+              <div key={d} className="text-center text-[9px] font-semibold uppercase tracking-widest text-zinc-400 pb-1.5">{d}</div>
+            ))}
+          </div>
+
+          {/* Grid */}
+          <div className="grid grid-cols-7 border-l border-t border-zinc-100">
+            {grid.map((day, i) => {
+              const iso      = isoDate(day)
+              const inMonth  = day.getMonth() === month
+              const isToday  = iso === todayIso
+              const calEvts  = calEventsOnDay(iso)
+              const tlEvts   = tlEventsOnDay(iso)
+
+              const dayQ       = Math.ceil((day.getMonth() + 1) / 3)
+              const dayQKey    = `${day.getFullYear()}-${dayQ}`
+              const effortLvl  = effortByKey[dayQKey] ?? 'none'
+              const effortColor = effortLvl !== 'none' ? EFFORT_COLORS[effortLvl] : null
+
+              return (
+                <div
+                  key={i}
+                  onClick={() => inMonth && openNew(iso)}
+                  className={`min-h-[72px] border-r border-b border-zinc-100 p-1 flex flex-col cursor-pointer transition-colors ${
+                    inMonth ? 'hover:bg-zinc-50' : 'bg-zinc-50/40'
+                  }`}
+                >
+                  {inMonth && effortColor && (
+                    <div
+                      className="w-full h-[2px] rounded-full mb-1 opacity-70"
+                      style={{ backgroundColor: effortColor }}
+                    />
+                  )}
+
+                  <div className="flex justify-end mb-0.5">
+                    <span className={`text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-medium ${
+                      isToday ? 'text-white' : inMonth ? 'text-zinc-600' : 'text-zinc-300'
+                    }`} style={isToday ? { backgroundColor: SAGE } : {}}>
+                      {day.getDate()}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-0.5 flex-1">
+                    {calEvts.slice(0, 2).map(e => {
+                      const meta = TYPE_META[e.type]
+                      const pos  = bandPosition(e, iso)
+                      const isMultiDay = e.start_date !== e.end_date
+                      return (
+                        <div
+                          key={e.id}
+                          onClick={ev => { ev.stopPropagation(); openEdit(e) }}
+                          className="text-[9px] font-medium leading-tight px-1 py-0.5 truncate cursor-pointer"
+                          style={{
+                            backgroundColor: meta.band,
+                            color: meta.text,
+                            borderRadius: isMultiDay
+                              ? pos === 'start' ? '3px 0 0 3px'
+                              : pos === 'end'   ? '0 3px 3px 0'
+                              : '0' : '3px',
+                            marginLeft:  (isMultiDay && (pos === 'mid' || pos === 'end'))   ? '-4px' : undefined,
+                            marginRight: (isMultiDay && (pos === 'mid' || pos === 'start')) ? '-4px' : undefined,
+                          }}
+                        >
+                          {(pos === 'start' || pos === 'single') ? e.title : '\u00a0'}
+                        </div>
+                      )
+                    })}
+                    {tlEvts.slice(0, 1).map(e => (
+                      <div key={e.id}
+                        className="text-[9px] font-medium leading-tight px-1 py-0.5 truncate rounded"
+                        style={{ backgroundColor: 'oklch(0.93 0.04 155)', color: SAGE }}>
+                        {e.title}
+                      </div>
+                    ))}
+                    {(calEvts.length + tlEvts.length) > 2 && (
+                      <p className="text-[9px] text-zinc-400 px-0.5">+{calEvts.length + tlEvts.length - 2}</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap items-center gap-3 pt-3">
+            {Object.entries(TYPE_META).map(([type, meta]) => (
+              <div key={type} className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: meta.band }} />
+                <span className="text-[10px] text-zinc-500">{meta.label}</span>
+              </div>
+            ))}
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: 'oklch(0.93 0.04 155)' }} />
+              <span className="text-[10px] text-zinc-500">Project event</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Backdrop ── */}
       <div
