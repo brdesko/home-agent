@@ -92,27 +92,27 @@ export default function LoginPage() {
           </g>
         </svg>
 
-        {/* Brand wordmark */}
-        <div className="relative z-10">
+        {/* Brand wordmark + tagline */}
+        <div className="relative z-10 space-y-2">
           <p
             className="font-display text-4xl font-normal tracking-tight"
             style={{ color: 'rgba(255,255,255,0.97)' }}
           >
             Parcel
           </p>
+          <p
+            className="text-[15px]"
+            style={{ color: 'rgba(255,255,255,0.65)' }}
+          >
+            Your home, thoughtfully engineered.
+          </p>
         </div>
 
-        {/* Bottom copy */}
-        <div className="relative z-10 space-y-3">
-          <p
-            className="text-[15px] leading-relaxed max-w-xs"
-            style={{ color: 'rgba(255,255,255,0.80)' }}
-          >
-            Every project, budget, and plan for your property — in one notebook.
-          </p>
+        {/* Bottom spacer copy */}
+        <div className="relative z-10">
           <p
             className="text-xs tracking-widest uppercase"
-            style={{ color: 'rgba(255,255,255,0.40)' }}
+            style={{ color: 'rgba(255,255,255,0.30)' }}
           >
             Property intelligence
           </p>
