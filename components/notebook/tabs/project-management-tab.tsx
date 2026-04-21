@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { ChevronRight, FolderOpen } from 'lucide-react'
 import { type Project } from '../project-card'
 import { type Goal } from '../goals-panel'
 import { ProjectSlideOver } from '../project-slide-over'
@@ -60,7 +61,16 @@ function ProjectGroup({ projects, onSelect }: { projects: ProjectRow[]; onSelect
   }
 
   if (Object.keys(grouped).length === 0) {
-    return <p className="text-sm text-zinc-400 py-6 italic">Nothing here yet. Ask the Agent to add one.</p>
+    return (
+      <div className="py-12 text-center space-y-1.5">
+        <div className="w-10 h-10 rounded-xl mx-auto flex items-center justify-center mb-3"
+          style={{ backgroundColor: 'oklch(0.96 0.03 155)' }}>
+          <FolderOpen className="w-5 h-5" style={{ color: 'oklch(0.50 0.10 155)' }} />
+        </div>
+        <p className="text-sm font-medium text-zinc-600">No projects yet.</p>
+        <p className="text-xs text-zinc-400">Ask the Agent to add one, or describe a project and it'll structure it for you.</p>
+      </div>
+    )
   }
 
   return (
@@ -77,7 +87,7 @@ function ProjectGroup({ projects, onSelect }: { projects: ProjectRow[]; onSelect
               return (
                 <button key={p.id} onClick={() => onSelect(p)}
                   style={{ borderLeftColor: DOMAIN_COLORS[p.domain] ?? '#a1a1aa', borderLeftWidth: '3px' }}
-                  className="w-full text-left border border-zinc-200 rounded-lg p-4 hover:shadow-sm transition-all">
+                  className="group w-full text-left border border-zinc-200 rounded-lg p-4 hover:shadow-sm hover:border-zinc-300 transition-all relative">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[p.priority] ?? 'bg-zinc-300'}`} />
@@ -104,6 +114,11 @@ function ProjectGroup({ projects, onSelect }: { projects: ProjectRow[]; onSelect
                       <span className="text-xs text-zinc-400 shrink-0">{doneTasks}/{totalTasks} tasks</span>
                     </div>
                   )}
+                  {/* Hover indicator */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-xs text-zinc-400">Open</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+                  </div>
                 </button>
               )
             })}

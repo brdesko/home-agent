@@ -1,5 +1,6 @@
 'use client'
 
+import { Info } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { type Project } from '../project-card'
 import { type TimelineEvent } from '../timeline-panel'
@@ -75,6 +76,22 @@ function fmt(n: number) {
   if (n >= 10000) return `$${Math.round(n / 1000)}k`
   if (n >= 1000)  return `$${(n / 1000).toFixed(1)}k`
   return `$${n}`
+}
+
+function getGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function EmptySlot({ message, sub }: { message: string; sub?: string }) {
+  return (
+    <div className="py-6 text-center space-y-1">
+      <p className="text-sm text-zinc-500">{message}</p>
+      {sub && <p className="text-xs text-zinc-400">{sub}</p>}
+    </div>
+  )
 }
 
 function ClickableCard({ children, onClick, className, style }: {
@@ -153,6 +170,20 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
   return (
     <div className="space-y-8">
 
+      {/* Greeting */}
+      {!isSparse && (
+        <div className="space-y-0.5">
+          <p className="text-xl font-display" style={{ color: 'oklch(0.38 0.015 75)' }}>{getGreeting()}.</p>
+          <p className="text-sm" style={{ color: 'oklch(0.60 0.012 75)' }}>
+            {activeCount > 0
+              ? `${activeCount} active project${activeCount !== 1 ? 's' : ''}`
+              : 'No active projects'}
+            {openTaskCount > 0 ? ` · ${openTaskCount} open task${openTaskCount !== 1 ? 's' : ''}` : ''}
+            {budget > 0 ? ` · ${budget >= 1000 ? `$${Math.round(budget / 1000)}k` : fmtCurrency(budget)} in Q${quarter}` : ''}
+          </p>
+        </div>
+      )}
+
       {/* Onboarding banner */}
       {isSparse && (
         <div className="rounded-xl overflow-hidden"
@@ -209,7 +240,16 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
           style={{ backgroundColor: riskBg(combined), border: `1px solid ${riskBorder(combined)}` }}
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">{quarterLabel(year, quarter)}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">{quarterLabel(year, quarter)}</p>
+              <div className="relative group">
+                <Info className="w-3 h-3 cursor-help" style={{ color: 'oklch(0.65 0 0)' }} />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2.5 rounded-lg text-xs leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg"
+                  style={{ backgroundColor: 'oklch(0.18 0.012 80)', color: 'oklch(1 0 0 / 0.75)' }}>
+                  Risk blends financial exposure (60%) and effort load (40%). Green &lt;40%, amber &lt;65%, orange &lt;85%, red above.
+                </div>
+              </div>
+            </div>
             <p className="text-lg font-semibold mt-1" style={{ color: riskTextColor(combined) }}>
               {riskLabel(combined)}
             </p>
@@ -301,7 +341,7 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
         <section className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Up Next</h2>
           {topTasks.length === 0 ? (
-            <p className="text-sm text-zinc-400">No open tasks. You're ahead of schedule.</p>
+            <EmptySlot message="All clear." sub="No open tasks right now." />
           ) : (
             <ul className="space-y-2">
               {topTasks.map(t => (
@@ -321,7 +361,7 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
         <section className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Upcoming</h2>
           {upcomingEvents.length === 0 ? (
-            <p className="text-sm text-zinc-400">No upcoming events.</p>
+            <EmptySlot message="Nothing scheduled." sub="Add events on the Calendar tab." />
           ) : (
             <ul className="space-y-2">
               {upcomingEvents.map(e => (

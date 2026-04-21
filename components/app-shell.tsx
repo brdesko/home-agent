@@ -25,10 +25,11 @@ type Props = {
   propertyName: string | null
   propertyId:   string | null
   allProperties: PropertyEntry[]
+  activeProjectCount?: number
   children: React.ReactNode
 }
 
-export function AppShell({ user, propertyName, propertyId, allProperties, children }: Props) {
+export function AppShell({ user, propertyName, propertyId, allProperties, activeProjectCount = 0, children }: Props) {
   const pathname    = usePathname()
   const router      = useRouter()
   const showSidebar = !!user && pathname !== '/login'
@@ -79,6 +80,7 @@ export function AppShell({ user, propertyName, propertyId, allProperties, childr
             const linkStyle = active ? { backgroundColor: SAGE } : {}
             const textColor = active ? 'white' : primary ? 'oklch(1 0 0 / 0.90)' : 'oklch(1 0 0 / 0.55)'
             const iconColor = active ? 'white' : primary ? 'oklch(1 0 0 / 0.80)' : 'oklch(1 0 0 / 0.40)'
+            const showBadge = href === '/' && activeProjectCount > 0
             return (
               <Link
                 key={href}
@@ -90,9 +92,24 @@ export function AppShell({ user, propertyName, propertyId, allProperties, childr
               >
                 <Icon className="w-4 h-4 shrink-0" style={{ color: iconColor }} />
                 <span style={{ color: textColor }}>{label}</span>
+                {showBadge && (
+                  <span
+                    className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none"
+                    style={{ backgroundColor: active ? 'rgba(255,255,255,0.25)' : SAGE, color: 'white' }}
+                  >
+                    {activeProjectCount}
+                  </span>
+                )}
               </Link>
             )
           })}
+
+          {/* Keyboard shortcut hint */}
+          <div className="px-3 pt-4 mt-2">
+            <p className="text-[10px]" style={{ color: 'oklch(1 0 0 / 0.22)' }}>
+              Press <kbd className="font-mono bg-white/10 px-1 py-0.5 rounded text-[9px]">G</kbd> to open Agent
+            </p>
+          </div>
         </nav>
 
         {/* User + sign out */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Bot, X, Send } from 'lucide-react'
 import { type Project } from '../project-card'
 import { type QuarterlyBudget } from '../budget-tab'
@@ -42,6 +42,7 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner, onQua
   const [saving, setSaving] = useState<string | null>(null)
   const [expandedCalc, setExpandedCalc] = useState<string | null>(null)
   const [localInputs, setLocalInputs] = useState<Record<string, string>>({})
+  const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
 
   // Agent chat state
   const [agentOpen, setAgentOpen] = useState(false)
@@ -181,6 +182,26 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner, onQua
     setLocalInputs(prev => ({ ...prev, [inputKey(year, quarter, key)]: raw }))
   }
 
+  // Tab-key navigation: row-major order (across quarters per field, then next field)
+  const navigableFields = FIELD_LABELS.map(f => f.key)
+
+  const handleCellKeyDown = useCallback((
+    e: React.KeyboardEvent,
+    year: number, quarter: number, fieldKey: keyof QuarterlyBudget
+  ) => {
+    if (e.key !== 'Tab') return
+    e.preventDefault()
+    const fieldIdx = navigableFields.indexOf(fieldKey)
+    const slotIdx  = slots.findIndex(s => s.year === year && s.quarter === quarter)
+    let nextField = fieldIdx
+    let nextSlot  = slotIdx + (e.shiftKey ? -1 : 1)
+    if (nextSlot >= slots.length) { nextSlot = 0; nextField = fieldIdx + 1 }
+    else if (nextSlot < 0)        { nextSlot = slots.length - 1; nextField = fieldIdx - 1 }
+    if (nextField < 0 || nextField >= navigableFields.length) return
+    const target = slots[nextSlot]
+    cellRefs.current.get(`${target.year}-${target.quarter}-${navigableFields[nextField]}`)?.focus()
+  }, [slots, navigableFields])
+
   function handleBlur(year: number, quarter: number, key: keyof QuarterlyBudget) {
     const ik = inputKey(year, quarter, key)
     const raw = localInputs[ik] ?? ''
@@ -256,11 +277,13 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner, onQua
                     <td key={qk} className="py-2.5 px-3 text-right">
                       <div className="flex flex-col items-end gap-1">
                         <input
+                          ref={el => { if (el) cellRefs.current.set(`${s.year}-${s.quarter}-${key}`, el) }}
                           disabled={!isOwner}
                           value={displayValue(s.year, s.quarter, key)}
                           onFocus={() => handleFocus(s.year, s.quarter, key)}
                           onChange={e => handleChange(s.year, s.quarter, key, e.target.value)}
                           onBlur={() => handleBlur(s.year, s.quarter, key)}
+                          onKeyDown={e => handleCellKeyDown(e, s.year, s.quarter, key)}
                           placeholder="0"
                           style={{ color: 'oklch(0.58 0.012 75)' }}
                           className="w-full text-right bg-transparent border-b border-zinc-200 focus:border-zinc-400 focus:outline-none py-0.5 disabled:text-zinc-400"
@@ -277,11 +300,13 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner, onQua
                   return (
                     <td key={qk} className="py-2.5 px-3 text-right">
                       <input
+                        ref={el => { if (el) cellRefs.current.set(`${s.year}-${s.quarter}-${key}`, el) }}
                         disabled={!isOwner}
                         value={displayValue(s.year, s.quarter, key)}
                         onFocus={() => handleFocus(s.year, s.quarter, key)}
                         onChange={e => handleChange(s.year, s.quarter, key, e.target.value)}
                         onBlur={() => handleBlur(s.year, s.quarter, key)}
+                        onKeyDown={e => handleCellKeyDown(e, s.year, s.quarter, key)}
                         placeholder="0"
                         style={{ color: 'oklch(0.58 0.012 75)' }}
                         className="w-full text-right bg-transparent border-b border-zinc-200 focus:border-zinc-400 focus:outline-none py-0.5 disabled:text-zinc-400"

@@ -8,12 +8,20 @@ import { AppShell } from "@/components/app-shell";
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 const dmSans    = DM_Sans({ variable: "--font-sans", subsets: ["latin"], display: "swap", weight: ["300","400","500","600","700"] });
 
-export const metadata: Metadata = {
-  title: "Parcel",
-  description: "Property Notebook",
-};
-
 export type PropertyEntry = { id: string; name: string }
+
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { title: 'Parcel', description: 'Property Notebook' }
+  const propertyId = await getPropertyId(supabase, user.id)
+  if (!propertyId) return { title: 'Parcel', description: 'Property Notebook' }
+  const { data } = await supabase.from('properties').select('name').eq('id', propertyId).single()
+  return {
+    title: data?.name ? `${data.name} · Parcel` : 'Parcel',
+    description: 'Property Notebook',
+  }
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -22,6 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let currentPropertyId:   string | null = null
   let currentPropertyName: string | null = null
   let allProperties:       PropertyEntry[] = []
+  let activeProjectCount = 0
 
   if (user) {
     const { data: memberships } = await supabase
@@ -47,6 +56,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     currentPropertyId = await getPropertyId(supabase, user.id)
     const current = allProperties.find(p => p.id === currentPropertyId)
     currentPropertyName = current?.name ?? allProperties[0]?.name ?? null
+
+    if (currentPropertyId) {
+      const { count } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true })
+        .eq('property_id', currentPropertyId)
+        .eq('status', 'active')
+      activeProjectCount = count ?? 0
+    }
   }
 
   return (
@@ -57,6 +75,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           propertyName={currentPropertyName}
           propertyId={currentPropertyId}
           allProperties={allProperties}
+          activeProjectCount={activeProjectCount}
         >
           {children}
         </AppShell>

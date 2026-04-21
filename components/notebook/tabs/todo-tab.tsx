@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Check } from 'lucide-react'
 import { type Project } from '../project-card'
 import { type Goal } from '../goals-panel'
 import { getCurrentQuarter } from '../quarter-utils'
@@ -124,6 +125,8 @@ function AddCostLineForm({ projectId, onDone }: { projectId: string; onDone: () 
   )
 }
 
+const SAGE = 'oklch(0.50 0.10 155)'
+
 function TaskRow({
   task,
   project,
@@ -141,6 +144,47 @@ function TaskRow({
 }) {
   const [expanded,     setExpanded]     = useState(false)
   const [showCostForm, setShowCostForm] = useState(false)
+  const [completed,    setCompleted]    = useState(task.status === 'done')
+  const [followUp,     setFollowUp]     = useState<string | null>(null)
+
+  async function handleComplete(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (completed || task.category !== 'project' || !task.id) return
+    setCompleted(true)
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectName: task.projectName ?? '' }),
+      })
+      const data = await res.json()
+      if (data.followUp) setFollowUp(data.followUp)
+    } catch {
+      setCompleted(false)
+    }
+  }
+
+  if (completed) {
+    return (
+      <li className="border border-zinc-100 rounded-lg overflow-hidden">
+        <div className="px-4 py-3 flex items-center gap-3 bg-zinc-50/60">
+          <button
+            className="w-5 h-5 rounded flex items-center justify-center shrink-0"
+            style={{ backgroundColor: SAGE, borderColor: SAGE }}
+          >
+            <Check className="w-3 h-3 text-white" />
+          </button>
+          <span className="flex-1 text-sm text-zinc-400 line-through">{task.title}</span>
+          {followUp && (
+            <a href={`/agent?ctx=${encodeURIComponent(followUp)}`}
+              className="text-xs text-zinc-500 hover:text-zinc-700 shrink-0 border border-zinc-200 px-2 py-1 rounded-md transition-colors">
+              Follow up →
+            </a>
+          )}
+        </div>
+      </li>
+    )
+  }
 
   return (
     <li className="border border-zinc-100 rounded-lg overflow-hidden">
@@ -148,6 +192,15 @@ function TaskRow({
         onClick={() => setExpanded(e => !e)}
         className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-zinc-50 transition-colors"
       >
+        {task.category === 'project' ? (
+          <button
+            onClick={handleComplete}
+            className="w-5 h-5 rounded border-2 border-zinc-300 flex items-center justify-center shrink-0 hover:border-zinc-400 transition-colors"
+            title="Mark complete"
+          />
+        ) : (
+          <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-300" />
+        )}
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${CATEGORY_BADGE[task.category]}`}>
           {CATEGORY_LABEL[task.category]}
         </span>
@@ -428,7 +481,14 @@ export function TodoTab({ projects, goals, ongoingTasks, isOwner }: Props) {
         )}
 
         {noTasks && (
-          <p className="text-sm text-zinc-400 py-8 text-center">No active tasks this quarter. Nice work.</p>
+          <div className="py-12 text-center space-y-1.5">
+            <div className="w-10 h-10 rounded-xl mx-auto flex items-center justify-center mb-3"
+              style={{ backgroundColor: 'oklch(0.96 0.03 155)' }}>
+              <Check className="w-5 h-5" style={{ color: SAGE }} />
+            </div>
+            <p className="text-sm font-medium text-zinc-600">All clear this quarter.</p>
+            <p className="text-xs text-zinc-400">No open tasks right now — nice work.</p>
+          </div>
         )}
       </div>
 

@@ -169,20 +169,40 @@ export default async function HomePage() {
   return (
     <div className="flex-1 overflow-y-auto">
       <AutoRefresh />
-      <div className="px-8 pt-7 pb-4 border-b border-zinc-100">
-        <h1 className="text-[28px] font-display text-zinc-800 leading-tight">Notebook</h1>
-        <div className="flex items-center gap-3 mt-3 text-xs text-zinc-400">
-          <span>{activeCount} active project{activeCount !== 1 ? 's' : ''}</span>
-          <span className="text-zinc-200">·</span>
-          <span>{openTaskCount} open task{openTaskCount !== 1 ? 's' : ''}</span>
-          <span className="text-zinc-200">·</span>
-          <span>Q{currentQuarter} {currentYear}</span>
-          {budgetedThisQuarter != null && (
-            <>
-              <span className="text-zinc-200">·</span>
-              <span>{budgetedThisQuarter >= 1000 ? `$${Math.round(budgetedThisQuarter / 1000)}k` : `$${budgetedThisQuarter}`} budgeted</span>
-            </>
-          )}
+      <div className="px-8 pt-6 pb-5 border-b border-zinc-100"
+        style={{ background: 'linear-gradient(to bottom, oklch(0.985 0.005 75), oklch(0.992 0.003 75))' }}>
+        <div className="flex items-end justify-between gap-6">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: 'oklch(0.60 0.08 155)' }}>
+              Property Notebook
+            </p>
+            <h1 className="text-[26px] font-display text-zinc-800 leading-tight">{property.name}</h1>
+            {property.address && (
+              <p className="text-sm text-zinc-400 mt-0.5">{locationSubtitle(property.name, property.address) ?? property.address}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-3 pb-0.5 shrink-0">
+            <div className="text-right">
+              <p className="text-lg font-display text-zinc-700 leading-none">{activeCount}</p>
+              <p className="text-[10px] text-zinc-400 mt-0.5">active</p>
+            </div>
+            <div className="w-px h-8 bg-zinc-200" />
+            <div className="text-right">
+              <p className="text-lg font-display text-zinc-700 leading-none">{openTaskCount}</p>
+              <p className="text-[10px] text-zinc-400 mt-0.5">open tasks</p>
+            </div>
+            {budgetedThisQuarter != null && (
+              <>
+                <div className="w-px h-8 bg-zinc-200" />
+                <div className="text-right">
+                  <p className="text-lg font-display text-zinc-700 leading-none">
+                    {budgetedThisQuarter >= 1000 ? `$${Math.round(budgetedThisQuarter / 1000)}k` : `$${budgetedThisQuarter}`}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">Q{currentQuarter} budget</p>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
       <NotebookTabs

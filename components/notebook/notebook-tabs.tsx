@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { LayoutGrid, CheckSquare, CalendarDays, FolderOpen, TrendingUp } from 'lucide-react'
 import { type Project } from './project-card'
 import { type TimelineEvent } from './timeline-panel'
 import { type Goal } from './goals-panel'
@@ -10,6 +11,14 @@ import { TodoTab, type OngoingTask } from './tabs/todo-tab'
 import { DashboardTab } from './tabs/dashboard-tab'
 import { OverviewTab } from './tabs/overview-tab'
 import { CalendarTab, type CalendarEvent } from './tabs/calendar-tab'
+
+const TAB_ICONS = {
+  Overview:  LayoutGrid,
+  'To-Do':   CheckSquare,
+  Calendar:  CalendarDays,
+  Projects:  FolderOpen,
+  Planning:  TrendingUp,
+} as const
 
 type GoalWithProgress = Goal & {
   totalProjects: number
@@ -42,20 +51,24 @@ export function NotebookTabs({ projects, events, goals, quarterlyBudgets: initia
       {/* Tab bar */}
       <div className="border-b border-zinc-200 px-6">
         <div className="max-w-6xl mx-auto flex gap-0">
-          {TABS.map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              style={tab === t ? { borderBottomColor: 'var(--sage)' } : {}}
-              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                tab === t ? 'text-zinc-800' : 'border-transparent text-zinc-400 hover:text-zinc-600'
-              }`}>
-              {t}
-            </button>
-          ))}
+          {TABS.map(t => {
+            const Icon = TAB_ICONS[t]
+            return (
+              <button key={t} onClick={() => setTab(t)}
+                style={tab === t ? { borderBottomColor: 'var(--sage)' } : {}}
+                className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  tab === t ? 'text-zinc-800' : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                }`}>
+                <Icon className="w-3.5 h-3.5" />
+                {t}
+              </button>
+            )
+          })}
         </div>
       </div>
 
       {tab === 'Calendar' ? (
-        <div className="px-6 py-6">
+        <div key="Calendar" className="px-6 py-6 animate-tab-enter">
           <CalendarTab
             initialEvents={calendarEvents}
             timelineEvents={events}
@@ -64,7 +77,7 @@ export function NotebookTabs({ projects, events, goals, quarterlyBudgets: initia
           />
         </div>
       ) : (
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div key={tab} className="max-w-4xl mx-auto px-6 py-8 animate-tab-enter">
           {tab === 'Overview' && (
             <OverviewTab
               projects={projects}
