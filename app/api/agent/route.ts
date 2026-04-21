@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { getPropertyId } from '@/lib/get-property-id'
+import { fetchWithFirecrawl } from '@/lib/firecrawl'
 
 const anthropic = new Anthropic()
 
@@ -15,6 +16,7 @@ const LISTING_PARSE_PROMPT = `You are a property intelligence assistant. Extract
 Return ONLY valid JSON with no markdown, matching this exact structure:
 {
   "summary": "One sentence describing this property",
+  "uncertain_fields": ["year_built"],
   "propertyDetails": {
     "year_built": 1985,
     "sq_footage": 2400,
@@ -37,6 +39,8 @@ Return ONLY valid JSON with no markdown, matching this exact structure:
     }
   ]
 }
+
+The "uncertain_fields" array should list the propertyDetails field names you were not confident about — e.g. if year_built was inferred rather than clearly stated, include "year_built". Use [] if everything is clearly stated.
 
 Use null for any propertyDetails fields not found. Include only assets and projects actually evidenced in the source. Asset types: hvac, water-heater, roof, well-pump, septic, electrical, plumbing, appliance, vehicle, equipment, structure, other. Project domains: renovation, farm, grounds, maintenance, home-systems. Project priorities: high, medium, low.`
 
@@ -174,7 +178,7 @@ When managing budget lines: use get_project_budget_lines to see what exists befo
 
 When effort or cost estimates are not provided, suggest reasonable placeholders based on the domain, description, and any saved references. Label them clearly as placeholders (e.g., "Placeholder estimate based on typical renovation projects — confirm when you have quotes"). Always propose these for explicit approval rather than silently defaulting.
 
-When the user shares a listing URL or pastes listing/inspection text: call parse_listing immediately. Do not ask them to extract details manually when you can parse them. For Zillow/Redfin URLs the tool will give you exact instructions to relay to the user. After a successful parse, immediately call update_property_details and create_asset for each asset found (no approval needed for factual records). Then propose any suggestedProjects for approval.
+When the user shares a listing URL or pastes listing/inspection text: call parse_listing immediately. Do not ask them to extract details manually when you can parse them. For Zillow/Redfin URLs, Firecrawl will handle the scraping automatically — just call parse_listing with the URL. If Firecrawl is not configured, the tool will give you exact copy-paste instructions to relay to the user. After a successful parse, immediately call update_property_details and create_asset for each asset found (no approval needed for factual records). If the parse result includes uncertain_fields, mention those specifically before writing: "I found these details but wasn't certain about [fields] — want to confirm before I save them?" Then propose any suggestedProjects for approval.
 
 When the user mentions buying something for the property — materials, tools, plants, services, anything — offer to log it as a purchase. Keep the offer brief: one sentence, then confirm before calling log_purchase. Capture: what was bought, vendor, price, date if mentioned, and which project it relates to if obvious. Use get_purchases when you need context about past buying patterns — what things cost, which vendors they use, what they tend to DIY vs. hire. Reference this history when making estimates or vendor suggestions.
 
@@ -1073,25 +1077,30 @@ export async function POST(req: NextRequest) {
           let contentText = ''
 
           if (input.source === 'url' && input.url) {
-            if (ZILLOW_REDFIN.test(input.url)) {
+            // Try Firecrawl first (handles Zillow, Redfin, and other JS-rendered sites)
+            const firecrawlText = await fetchWithFirecrawl(input.url)
+            if (firecrawlText) {
+              contentText = firecrawlText.slice(0, 60000)
+            } else if (ZILLOW_REDFIN.test(input.url)) {
               toolResults.push({
                 type: 'tool_result', tool_use_id: block.id,
-                content: 'Zillow and Redfin block automated access. Ask the user to: open the listing in their browser, press Ctrl+A to select all, Ctrl+C to copy, then paste the text into this chat. Then call parse_listing again with source: "text".',
+                content: 'Zillow and Redfin block automated access and Firecrawl is not configured. Ask the user to: open the listing in their browser, press Ctrl+A to select all, Ctrl+C to copy, then paste the text into this chat. Then call parse_listing again with source: "text".',
               })
               continue
-            }
-            const res = await fetch(input.url, {
-              headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HomeAgent/1.0)' },
-              signal: AbortSignal.timeout(15000),
-            })
-            const html = await res.text()
-            contentText = stripHtml(html)
-            if (contentText.length < 200) {
-              toolResults.push({
-                type: 'tool_result', tool_use_id: block.id,
-                content: 'The page returned too little content to parse (likely blocked or JS-rendered). Ask the user to paste the listing text directly into the chat, then call parse_listing with source: "text".',
+            } else {
+              const res = await fetch(input.url, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HomeAgent/1.0)' },
+                signal: AbortSignal.timeout(15000),
               })
-              continue
+              const html = await res.text()
+              contentText = stripHtml(html)
+              if (contentText.length < 200) {
+                toolResults.push({
+                  type: 'tool_result', tool_use_id: block.id,
+                  content: 'The page returned too little content to parse (likely blocked or JS-rendered). Ask the user to paste the listing text directly into the chat, then call parse_listing with source: "text".',
+                })
+                continue
+              }
             }
           } else if (input.source === 'text' && input.text) {
             contentText = input.text.slice(0, 60000)
@@ -1101,7 +1110,7 @@ export async function POST(req: NextRequest) {
           }
 
           const parseMsg = await anthropic.messages.create({
-            model: 'claude-haiku-4-5-20251001',
+            model: 'claude-sonnet-4-6',
             max_tokens: 4096,
             messages: [{ role: 'user', content: `Property listing content:\n\n${contentText}\n\n${LISTING_PARSE_PROMPT}` }],
           })

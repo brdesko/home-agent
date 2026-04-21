@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 export type ParseResult = {
   summary: string
+  uncertain_fields?: string[]
   propertyDetails: { field: string; label: string; value: string }[]
   assets: {
     name: string; assetType: string; make?: string; model?: string
@@ -157,18 +158,29 @@ export function ParseConfirmation({ result, onClose, onApplied }: Props) {
             {result.propertyDetails.length > 0 && (
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-600 mb-3">Property Details</h3>
+                {(result.uncertain_fields ?? []).length > 0 && (
+                  <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                    Fields marked with ⚠ were inferred, not clearly stated — review before applying.
+                  </p>
+                )}
                 <div className="space-y-2">
-                  {result.propertyDetails.map((d, i) => (
-                    <label key={d.field} className="flex items-center gap-3">
-                      <input type="checkbox" checked={propChecks[i]}
-                        onChange={e => setPropChecks(c => c.map((v, j) => j === i ? e.target.checked : v))}
-                        className="w-4 h-4 rounded shrink-0" />
-                      <span className="text-sm text-zinc-600 w-36 shrink-0">{d.label}</span>
-                      <input value={propValues[i]}
-                        onChange={e => setPropValues(v => v.map((x, j) => j === i ? e.target.value : x))}
-                        className={inp} />
-                    </label>
-                  ))}
+                  {result.propertyDetails.map((d, i) => {
+                    const uncertain = (result.uncertain_fields ?? []).includes(d.field)
+                    return (
+                      <label key={d.field} className={`flex items-center gap-3 rounded-lg px-2 py-1 -mx-2 ${uncertain ? 'bg-amber-50' : ''}`}>
+                        <input type="checkbox" checked={propChecks[i]}
+                          onChange={e => setPropChecks(c => c.map((v, j) => j === i ? e.target.checked : v))}
+                          className="w-4 h-4 rounded shrink-0" />
+                        <span className="text-sm text-zinc-600 w-36 shrink-0">
+                          {uncertain && <span className="mr-1 text-amber-500">⚠</span>}
+                          {d.label}
+                        </span>
+                        <input value={propValues[i]}
+                          onChange={e => setPropValues(v => v.map((x, j) => j === i ? e.target.value : x))}
+                          className={inp} />
+                      </label>
+                    )
+                  })}
                 </div>
               </section>
             )}
