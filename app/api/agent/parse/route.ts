@@ -77,6 +77,16 @@ function getMimeCategory(name: string): 'pdf' | 'image' | 'text' {
   return 'text'
 }
 
+// Edge-compatible base64 encoder (no Buffer available in Edge runtime)
+function toBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  const chunks: string[] = []
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    chunks.push(String.fromCharCode(...bytes.subarray(i, i + 0x8000)))
+  }
+  return btoa(chunks.join(''))
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -118,18 +128,20 @@ export async function POST(req: NextRequest) {
           const fileName = path.split('/').pop() ?? ''
           const category = getMimeCategory(fileName)
 
+          const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(path)
+          if (dlErr || !blob) { fail(dlErr?.message ?? 'Download failed'); return }
+          const arrayBuf = await blob.arrayBuffer()
+
           if (category === 'text') {
-            const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(path)
-            if (dlErr || !blob) { fail(dlErr?.message ?? 'Download failed'); return }
-            const content = new TextDecoder().decode(await blob.arrayBuffer()).slice(0, 60000)
+            const content = new TextDecoder().decode(arrayBuf).slice(0, 60000)
             messages = [{ role: 'user', content: `Document content:\n\n${content}\n\n${PARSE_PROMPT}` }]
           } else {
-            const { data: signedData, error: signErr } = await supabase.storage
-              .from(BUCKET).createSignedUrl(path, 300)
-            if (signErr || !signedData?.signedUrl) { fail(signErr?.message ?? 'Could not generate signed URL'); return }
+            const base64 = toBase64(arrayBuf)
+            const mediaType = category === 'pdf' ? 'application/pdf'
+              : blob.type || 'image/jpeg'
             const contentBlock = category === 'pdf'
-              ? { type: 'document', source: { type: 'url', url: signedData.signedUrl } }
-              : { type: 'image',    source: { type: 'url', url: signedData.signedUrl } }
+              ? { type: 'document', source: { type: 'base64', media_type: mediaType, data: base64 } }
+              : { type: 'image',    source: { type: 'base64', media_type: mediaType, data: base64 } }
             messages = [{ role: 'user', content: [contentBlock, { type: 'text', text: PARSE_PROMPT }] }]
           }
 
