@@ -31,7 +31,26 @@ export default async function HomePage() {
   if (!user) redirect('/login')
 
   const propertyId = await getPropertyId(supabase, user.id)
-  if (!propertyId) redirect('/login')
+  if (!propertyId) {
+    // All properties archived or none exist — show recovery screen
+    return (
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-lg mx-auto px-8 py-20 text-center space-y-6">
+          <h2 className="font-display text-2xl text-zinc-800">No active properties.</h2>
+          <p className="text-zinc-500 text-sm leading-relaxed">
+            All of your properties are archived. Create a new one to get started.
+          </p>
+          <Link
+            href="/agent"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium text-white transition-colors"
+            style={{ backgroundColor: 'oklch(0.50 0.10 155)' }}
+          >
+            Create a new property →
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   const { data: propertyData } = await supabase
     .from('property_members')

@@ -269,14 +269,16 @@ function PropertyDropdown({ propertyName, propertyId, allProperties, router }: D
                 <span className="text-base leading-none" style={{ color: 'oklch(1 0 0 / 0.50)' }}>+</span>
                 New property
               </button>
-              <button
-                onClick={() => setMode('archiveConfirm')}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors hover:bg-white/6"
-                style={{ color: 'oklch(1 0 0 / 0.55)' }}
-              >
-                <Archive className="w-3.5 h-3.5 shrink-0" />
-                Archive this property
-              </button>
+              {allProperties.length > 1 && (
+                <button
+                  onClick={() => setMode('archiveConfirm')}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors hover:bg-white/6"
+                  style={{ color: 'oklch(1 0 0 / 0.55)' }}
+                >
+                  <Archive className="w-3.5 h-3.5 shrink-0" />
+                  Archive this property
+                </button>
+              )}
               <button
                 onClick={() => setMode('deleteConfirm1')}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors hover:bg-white/6"
