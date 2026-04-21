@@ -102,18 +102,14 @@ export function DocumentsTab({ initial, isOwner }: Props) {
   async function parseDoc(path: string) {
     setParsing(path); setParseResult(null); setParseErr(null)
     try {
-      const res = await fetch('/api/agent/parse', {
+      const res = await fetch('/api/agent/parse-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'document', path }),
+        body: JSON.stringify({ path }),
       })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        setParseErr((err as { error?: string }).error ?? 'Parse failed'); setParsing(null); return
-      }
-      const data = await readParseStream(res) as { error?: string }
+      const data = await res.json() as { error?: string }
       setParsing(null)
-      if (data.error) { setParseErr(data.error); return }
+      if (!res.ok || data.error) { setParseErr(data.error ?? 'Parse failed'); return }
       setParseResult(data as ParseResult)
     } catch (e) {
       setParsing(null)
@@ -188,13 +184,10 @@ export function DocumentsTab({ initial, isOwner }: Props) {
                       <>
                         <button
                           onClick={() => parseDoc(doc.path)}
-                          disabled={parsing === doc.path}
+                          disabled={!!parsing}
                           className="text-xs px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors disabled:opacity-40">
                           {parsing === doc.path ? 'Parsing…' : 'Parse with Agent'}
                         </button>
-                        {parsing === doc.path && parseErr && (
-                          <p className="text-xs text-red-500 mt-1">{parseErr}</p>
-                        )}
                         <button
                           onClick={() => deleteDoc(doc.name)}
                           disabled={deleting === doc.name}
@@ -208,6 +201,13 @@ export function DocumentsTab({ initial, isOwner }: Props) {
               </li>
             ))}
           </ul>
+        )}
+
+        {/* Patience notice while a document is parsing */}
+        {parsing && parsing !== 'url' && parsing !== 'text' && (
+          <p className="text-xs text-zinc-500 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+            The agent is reading your document — this can take up to a minute for large files. Please be patient.
+          </p>
         )}
 
         {/* Parse error */}
