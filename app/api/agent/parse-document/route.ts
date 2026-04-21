@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import pdfParse from 'pdf-parse'
+import { extractText } from 'unpdf'
 
 // Node.js runtime — gives us pdf-parse and avoids the 30s Edge ceiling.
 // Text extraction is milliseconds; Anthropic text-only calls complete in ~5–8s.
@@ -84,11 +84,12 @@ export async function POST(req: NextRequest) {
   const arrayBuf = await blob.arrayBuffer()
   const buffer   = Buffer.from(arrayBuf)
 
-  // Extract text from PDF. Falls back to empty string for image-only PDFs.
+  // Extract text from PDF. Falls back to empty for image-only (scanned) PDFs.
   let docText = ''
   try {
-    const parsed = await pdfParse(buffer)
-    docText = parsed.text.trim()
+    const uint8 = new Uint8Array(arrayBuf)
+    const { text } = await extractText(uint8, { mergePages: true })
+    docText = text.trim()
   } catch {
     return NextResponse.json({ error: 'Could not read this PDF. It may be corrupted or password-protected.' }, { status: 422 })
   }
