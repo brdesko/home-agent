@@ -2,8 +2,16 @@ import { TaskList, type Task } from './task-list'
 
 type BudgetLine = {
   id: string
+  description: string
   amount: number
   line_type: string
+}
+
+export type TimelineEventItem = {
+  id: string
+  title: string
+  event_date: string
+  description: string | null
 }
 
 export type Project = {
@@ -12,9 +20,13 @@ export type Project = {
   domain: string
   status: string
   priority: string
+  effort: string | null
+  target_year: number | null
+  target_quarter: number | null
   description: string | null
   tasks: Task[]
   budget_lines: BudgetLine[]
+  timeline_events: TimelineEventItem[]
 }
 
 const STATUS_STYLES: Record<string, string> = {

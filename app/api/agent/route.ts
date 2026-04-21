@@ -57,17 +57,18 @@ ${referencesSection}
 
 Use project and goal IDs when calling tools. Reference the relevant goal when proposing or modifying projects.
 
-A project has: name, domain ('farm', 'renovation', 'grounds', 'maintenance', 'home-systems', or new), status ('planned', 'active', 'on_hold', 'complete'), priority ('low', 'medium', 'high'), and description.
+A project has: name, domain ('farm', 'renovation', 'grounds', 'maintenance', 'home-systems', or new), status ('planned', 'active', 'on_hold', 'complete'), priority ('low', 'medium', 'high'), effort ('low', 'medium', 'high', 'very_high' — reflects owner time/energy required, not cost; hired-out work is low effort even if expensive), target_year and target_quarter (when the project is planned to happen), and description.
 
 A task has: title, status ('todo', 'in_progress', 'done', 'blocked'), and optional due_date (YYYY-MM-DD).
 
 Pattern awareness: use the completed projects and saved references to inform suggestions. If Brady and Erin have consistently hired out a certain type of work (evidenced by saved vendors), reflect that when proposing tasks. If they have a trusted vendor for a relevant trade, mention them by name rather than suggesting they find someone. Notice which domains they prioritize and which they defer — let that shape your recommendations.
 
 When adding a new project:
-1. Ask focused clarifying questions — priority, scope, known budget, key dates.
-2. If a trusted vendor is relevant to this project, mention them in the proposal.
-3. Propose a complete package (project + initial tasks + budget lines if relevant + timeline events).
-4. Wait for explicit approval before calling create_project.
+1. Ask focused clarifying questions — priority, scope, known budget, key dates, and which quarter they expect to tackle it.
+2. Estimate the effort level: low = mostly hired out (kitchen renovation with contractors), medium = some DIY coordination, high = significant hands-on work, very_high = intensive DIY (building a fence, prepping fields). Ask if not obvious.
+3. If a trusted vendor is relevant to this project, mention them in the proposal.
+4. Propose a complete package (project + initial tasks + budget lines if relevant + timeline events), including effort and target quarter.
+5. Wait for explicit approval before calling create_project.
 
 When modifying an existing project or task:
 1. Confirm you understand which project or task they mean.
@@ -113,6 +114,9 @@ type CreateProjectInput = {
   domain: string
   status: string
   priority: string
+  effort?: string
+  target_year?: number
+  target_quarter?: number
   description?: string
   tasks?: TaskInput[]
   budget_lines?: BudgetLineInput[]
@@ -125,6 +129,9 @@ type UpdateProjectInput = {
   domain?: string
   status?: string
   priority?: string
+  effort?: string
+  target_year?: number
+  target_quarter?: number
   description?: string
   goal_id?: string
 }
@@ -143,6 +150,16 @@ type AddTaskInput = {
   due_date?: string
 }
 
+type SetQuarterlyBudgetInput = {
+  year: number
+  quarter: number
+  core_income?: number
+  additional_income?: number
+  core_expenses?: number
+  additional_expenses?: number
+  allocation_pct?: number
+}
+
 type SaveReferenceInput = {
   type: 'vendor' | 'brand' | 'resource'
   name: string
@@ -159,7 +176,7 @@ type ProjectCreated = {
 }
 
 type ChangeResult = {
-  type: 'project_created' | 'project_updated' | 'task_updated' | 'task_added'
+  type: 'project_created' | 'project_updated' | 'task_updated' | 'task_added' | 'budget_updated' | 'reference_saved'
   summary: string
 }
 
@@ -170,10 +187,13 @@ const tools: Anthropic.Tool[] = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        name:        { type: 'string' },
-        domain:      { type: 'string' },
-        status:      { type: 'string', enum: ['planned', 'active', 'on_hold'] },
-        priority:    { type: 'string', enum: ['low', 'medium', 'high'] },
+        name:           { type: 'string' },
+        domain:         { type: 'string' },
+        status:         { type: 'string', enum: ['planned', 'active', 'on_hold'] },
+        priority:       { type: 'string', enum: ['low', 'medium', 'high'] },
+        effort:         { type: 'string', enum: ['low', 'medium', 'high', 'very_high'], description: 'Owner effort level: low = mostly hired out, very_high = intensive DIY' },
+        target_year:    { type: 'number', description: 'Year this project is planned for' },
+        target_quarter: { type: 'number', enum: [1, 2, 3, 4], description: 'Quarter this project is planned for' },
         description: { type: 'string' },
         tasks: {
           type: 'array',
@@ -233,13 +253,16 @@ const tools: Anthropic.Tool[] = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        project_id:  { type: 'string' },
-        name:        { type: 'string' },
-        domain:      { type: 'string' },
-        status:      { type: 'string', enum: ['planned', 'active', 'on_hold', 'complete'] },
-        priority:    { type: 'string', enum: ['low', 'medium', 'high'] },
-        description: { type: 'string' },
-        goal_id:     { type: 'string', description: 'Assign to a goal by ID, or omit to leave unchanged' },
+        project_id:     { type: 'string' },
+        name:           { type: 'string' },
+        domain:         { type: 'string' },
+        status:         { type: 'string', enum: ['planned', 'active', 'on_hold', 'complete'] },
+        priority:       { type: 'string', enum: ['low', 'medium', 'high'] },
+        effort:         { type: 'string', enum: ['low', 'medium', 'high', 'very_high'], description: 'Owner effort level' },
+        target_year:    { type: 'number', description: 'Year this project is planned for' },
+        target_quarter: { type: 'number', enum: [1, 2, 3, 4], description: 'Quarter this project is planned for' },
+        description:    { type: 'string' },
+        goal_id:        { type: 'string', description: 'Assign to a goal by ID, or omit to leave unchanged' },
       },
       required: ['project_id'],
     },
@@ -256,6 +279,23 @@ const tools: Anthropic.Tool[] = [
         due_date: { type: 'string', description: 'ISO date YYYY-MM-DD, or null to clear' },
       },
       required: ['task_id'],
+    },
+  },
+  {
+    name: 'set_quarterly_budget',
+    description: 'Sets one or more fields on a quarterly budget entry. Creates the quarter if it does not exist. Only call after explicit user approval.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        year:               { type: 'number', description: 'e.g. 2026' },
+        quarter:            { type: 'number', enum: [1, 2, 3, 4] },
+        core_income:        { type: 'number', description: 'Post-tax salary and bonus aggregate' },
+        additional_income:  { type: 'number', description: 'Investment accounts, side income, etc.' },
+        core_expenses:      { type: 'number', description: 'Fixed recurring expenses (utilities, internet, etc.)' },
+        additional_expenses:{ type: 'number', description: 'Variable expenses (food, entertainment, travel, etc.)' },
+        allocation_pct:     { type: 'number', description: 'Percentage of net income allocated to home improvement (0-100)' },
+      },
+      required: ['year', 'quarter'],
     },
   },
   {
@@ -363,7 +403,7 @@ export async function POST(req: NextRequest) {
 
         const { data: project, error: projectError } = await supabase
           .from('projects')
-          .insert({ property_id: PROPERTY_ID, name: input.name, domain: input.domain, status: input.status, priority: input.priority, description: input.description ?? null })
+          .insert({ property_id: PROPERTY_ID, name: input.name, domain: input.domain, status: input.status, priority: input.priority, effort: input.effort ?? null, target_year: input.target_year ?? null, target_quarter: input.target_quarter ?? null, description: input.description ?? null })
           .select('id, name')
           .single()
 
@@ -410,6 +450,26 @@ export async function POST(req: NextRequest) {
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error.message}`, is_error: true })
         } else {
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(tasks) })
+        }
+      }
+
+      // ── set_quarterly_budget ─────────────────────────────────────────
+      else if (block.name === 'set_quarterly_budget') {
+        const { year, quarter, ...fields } = block.input as SetQuarterlyBudgetInput
+        const { data, error } = await supabase
+          .from('quarterly_budget')
+          .upsert(
+            { property_id: PROPERTY_ID, year, quarter, ...fields },
+            { onConflict: 'property_id,year,quarter' }
+          )
+          .select()
+          .single()
+
+        if (error || !data) {
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${error?.message}`, is_error: true })
+        } else {
+          changes.push({ type: 'budget_updated', summary: `Updated Q${quarter} ${year} budget` })
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify({ success: true, year, quarter }) })
         }
       }
 
@@ -471,12 +531,15 @@ export async function POST(req: NextRequest) {
       else if (block.name === 'update_project') {
         const { project_id, ...fields } = block.input as UpdateProjectInput
         const updates: Record<string, unknown> = {}
-        if (fields.name        !== undefined) updates.name        = fields.name
-        if (fields.domain      !== undefined) updates.domain      = fields.domain
-        if (fields.status      !== undefined) updates.status      = fields.status
-        if (fields.priority    !== undefined) updates.priority    = fields.priority
-        if (fields.description !== undefined) updates.description = fields.description
-        if (fields.goal_id     !== undefined) updates.goal_id     = fields.goal_id
+        if (fields.name           !== undefined) updates.name           = fields.name
+        if (fields.domain         !== undefined) updates.domain         = fields.domain
+        if (fields.status         !== undefined) updates.status         = fields.status
+        if (fields.priority       !== undefined) updates.priority       = fields.priority
+        if (fields.effort         !== undefined) updates.effort         = fields.effort
+        if (fields.target_year    !== undefined) updates.target_year    = fields.target_year
+        if (fields.target_quarter !== undefined) updates.target_quarter = fields.target_quarter
+        if (fields.description    !== undefined) updates.description    = fields.description
+        if (fields.goal_id        !== undefined) updates.goal_id        = fields.goal_id
 
         const { data, error } = await supabase
           .from('projects')

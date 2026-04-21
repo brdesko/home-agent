@@ -2,19 +2,12 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/sign-out-button'
 import Link from 'next/link'
-import { ProjectCard, type Project } from '@/components/notebook/project-card'
-import { TimelinePanel, type TimelineEvent } from '@/components/notebook/timeline-panel'
-import { BudgetPanel } from '@/components/notebook/budget-panel'
+import { type Project } from '@/components/notebook/project-card'
+import { type TimelineEvent } from '@/components/notebook/timeline-panel'
 import { AutoRefresh } from '@/components/notebook/auto-refresh'
-import { GoalsPanel, type Goal } from '@/components/notebook/goals-panel'
-
-const DOMAIN_LABELS: Record<string, string> = {
-  renovation:     'Renovation',
-  farm:           'Farm',
-  grounds:        'Grounds',
-  maintenance:    'Maintenance',
-  'home-systems': 'Home Systems',
-}
+import { type Goal } from '@/components/notebook/goals-panel'
+import { type QuarterlyBudget } from '@/components/notebook/budget-tab'
+import { NotebookTabs } from '@/components/notebook/notebook-tabs'
 
 const DOMAIN_ORDER = ['renovation', 'farm', 'grounds', 'maintenance', 'home-systems']
 
@@ -38,10 +31,10 @@ export default async function HomePage() {
   const propertyId = property.id
   const today      = new Date().toISOString().split('T')[0]
 
-  const [projectsResult, eventsResult, goalsResult] = await Promise.all([
+  const [projectsResult, eventsResult, goalsResult, budgetResult] = await Promise.all([
     supabase
       .from('projects')
-      .select('*, tasks(*), budget_lines(*)')
+      .select('*, tasks(*), budget_lines(*), timeline_events(*)')
       .eq('property_id', propertyId)
       .order('name'),
     supabase
@@ -57,11 +50,19 @@ export default async function HomePage() {
       .eq('property_id', propertyId)
       .order('priority', { ascending: false })
       .order('name'),
+    supabase
+      .from('quarterly_budget')
+      .select('*')
+      .eq('property_id', propertyId)
+      .order('year', { ascending: false })
+      .order('quarter', { ascending: false })
+      .limit(6),
   ])
 
-  const projects = (projectsResult.data ?? []) as (Project & { goal_id: string | null })[]
-  const events   = (eventsResult.data  ?? []) as TimelineEvent[]
-  const goals    = (goalsResult.data   ?? []) as Goal[]
+  const projects        = (projectsResult.data ?? []) as (Project & { goal_id: string | null })[]
+  const events          = (eventsResult.data  ?? []) as TimelineEvent[]
+  const goals           = (goalsResult.data   ?? []) as Goal[]
+  const quarterlyBudgets = (budgetResult.data  ?? []) as QuarterlyBudget[]
 
   // Attach project progress counts to each goal
   const goalsWithProgress = goals.map(goal => ({
@@ -108,31 +109,14 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <GoalsPanel goals={goalsWithProgress} />
-
-      <div className="max-w-6xl mx-auto px-6 py-8 flex gap-10">
-        {/* Projects */}
-        <main className="flex-1 min-w-0 space-y-10">
-          {Object.entries(grouped).map(([domain, domainProjects]) => (
-            <section key={domain}>
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-4">
-                {DOMAIN_LABELS[domain] ?? domain}
-              </h2>
-              <div className="space-y-3">
-                {domainProjects.map(project => (
-                  <ProjectCard key={project.id} project={project} isOwner={isOwner} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </main>
-
-        {/* Sidebar */}
-        <aside className="w-64 shrink-0 space-y-8 pt-1">
-          <TimelinePanel events={events} />
-          {isOwner && <BudgetPanel projects={projects} />}
-        </aside>
-      </div>
+      <NotebookTabs
+        projects={projects}
+        events={events}
+        goals={goalsWithProgress}
+        quarterlyBudgets={quarterlyBudgets}
+        grouped={grouped}
+        isOwner={isOwner}
+      />
     </div>
   )
 }
