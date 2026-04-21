@@ -258,7 +258,7 @@ export function CalendarTab({ initialEvents, timelineEvents, projects, quarterly
 
       {/* ── Schedule view ── */}
       {subTab === 'schedule' && (
-        <div className="flex-1 flex flex-col min-h-0" style={{ minHeight: 460 }}>
+        <div className="flex flex-col" style={{ minHeight: 520 }}>
           <QuarterlyScheduler
             projects={projects}
             quarterlyBudgets={quarterlyBudgets}
@@ -273,7 +273,7 @@ export function CalendarTab({ initialEvents, timelineEvents, projects, quarterly
 
       {/* ── Calendar view ── */}
       {subTab === 'calendar' && (
-        <div className="flex flex-col max-w-[560px]">
+        <div className="flex flex-col w-full">
 
           {/* Month nav */}
           <div className="flex items-center justify-between mb-4">
