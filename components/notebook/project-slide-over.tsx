@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Bot, Send } from 'lucide-react'
 import { type Project } from './project-card'
 import { type Goal } from './goals-panel'
 import { TaskList } from './task-list'
@@ -39,11 +40,20 @@ type Props = {
   onArchived?: (projectId: string, status: 'complete' | 'cancelled') => void
 }
 
+const SAGE = 'oklch(0.50 0.10 155)'
+
 type PhotoReview = {
   signedUrl: string
   status: 'loading' | 'done'
   messages: { role: 'user' | 'assistant'; content: string }[]
   draft: string
+}
+
+type BudgetAgent = {
+  status: 'loading' | 'done'
+  messages: { role: 'user' | 'assistant'; content: string }[]
+  draft: string
+  suggestedBudget: number | null
 }
 
 export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose, onArchived }: Props) {
@@ -59,7 +69,10 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoErr, setPhotoErr]             = useState<string | null>(null)
   const [photoReview, setPhotoReview]       = useState<PhotoReview | null>(null)
-  const photoRef = useRef<HTMLInputElement>(null)
+  const [budgetAgent, setBudgetAgent]       = useState<BudgetAgent | null>(null)
+  const [budgetApplied, setBudgetApplied]   = useState(false)
+  const photoRef    = useRef<HTMLInputElement>(null)
+  const budgetChatEndRef = useRef<HTMLDivElement>(null)
 
   async function doArchive(status: 'complete' | 'cancelled') {
     if (!project) return
@@ -98,6 +111,8 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
     setArchiveError(null)
     setPhotoReview(null)
     setPhotoErr(null)
+    setBudgetAgent(null)
+    setBudgetApplied(false)
   }, [project?.id])
 
   useEffect(() => {
@@ -221,6 +236,58 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
     } catch {
       setPhotoReview(r => r && { ...r, status: 'done' })
     }
+  }
+
+  async function openBudgetAgent() {
+    if (!project) return
+    setBudgetAgent({ status: 'loading', messages: [], draft: '', suggestedBudget: null })
+    setBudgetApplied(false)
+    try {
+      const res = await fetch('/api/agent/project-budget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: { name: project.name, description: project.description, domain: project.domain, effort: project.effort, target_budget: project.target_budget },
+          messages: [],
+        }),
+      })
+      const data = await res.json()
+      setBudgetAgent({ status: 'done', messages: [{ role: 'assistant', content: data.message }], draft: '', suggestedBudget: data.suggestions?.target_budget ?? null })
+    } catch {
+      setBudgetAgent(a => a && { ...a, status: 'done' })
+    }
+  }
+
+  async function sendBudgetAgentMessage() {
+    if (!budgetAgent || !budgetAgent.draft.trim() || !project) return
+    const userMsg = { role: 'user' as const, content: budgetAgent.draft.trim() }
+    const next = [...budgetAgent.messages, userMsg]
+    setBudgetAgent(a => a && { ...a, messages: next, draft: '', status: 'loading' })
+    try {
+      const res = await fetch('/api/agent/project-budget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: { name: project.name, description: project.description, domain: project.domain, effort: project.effort, target_budget: project.target_budget },
+          messages: next,
+        }),
+      })
+      const data = await res.json()
+      setBudgetAgent(a => a && {
+        ...a, status: 'done',
+        messages: [...next, { role: 'assistant', content: data.message }],
+        suggestedBudget: data.suggestions?.target_budget ?? a.suggestedBudget,
+      })
+    } catch {
+      setBudgetAgent(a => a && { ...a, status: 'done' })
+    }
+    setTimeout(() => budgetChatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+  }
+
+  function applyBudgetSuggestion(amount: number) {
+    setTargetBudget(String(amount))
+    saveProjectField('target_budget', String(amount))
+    setBudgetApplied(true)
   }
 
   async function addLine() {
@@ -379,6 +446,92 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
                         <span className={overTarget ? 'text-red-500 font-medium' : 'text-zinc-400'}>
                           {overTarget ? `${fmtCurrency(spendRef - parsedTarget)} over` : `${fmtCurrency(parsedTarget - spendRef)} left of ${fmtCurrency(parsedTarget)}`}
                         </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ask Agent button */}
+                  {!budgetAgent && (
+                    <button
+                      onClick={openBudgetAgent}
+                      className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+                      style={{ color: SAGE }}
+                    >
+                      <Bot className="w-3 h-3" />
+                      Ask Agent to help estimate this budget
+                    </button>
+                  )}
+
+                  {/* Inline budget agent chat */}
+                  {budgetAgent && (
+                    <div className="border border-zinc-200 rounded-xl overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-100 bg-zinc-50">
+                        <div className="flex items-center gap-1.5">
+                          <Bot className="w-3 h-3 text-zinc-500" />
+                          <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Agent · Budget Estimator</span>
+                        </div>
+                        <button onClick={() => setBudgetAgent(null)} className="text-zinc-400 hover:text-zinc-600 text-xs">✕</button>
+                      </div>
+
+                      <div className="px-3 py-3 space-y-2.5 max-h-52 overflow-y-auto bg-white">
+                        {budgetAgent.messages.map((m, i) => (
+                          <div key={i} className={m.role === 'user' ? 'flex justify-end' : ''}>
+                            {m.role === 'assistant' && (
+                              <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wide mb-0.5">Agent</p>
+                            )}
+                            <div className={`text-xs leading-relaxed ${
+                              m.role === 'user'
+                                ? 'bg-zinc-100 text-zinc-700 px-2.5 py-1.5 rounded-xl rounded-tr-sm max-w-[80%] text-right'
+                                : 'text-zinc-700'
+                            }`}>
+                              {m.content}
+                            </div>
+                          </div>
+                        ))}
+                        {budgetAgent.status === 'loading' && (
+                          <p className="text-xs text-zinc-400 italic">Agent is thinking…</p>
+                        )}
+                        <div ref={budgetChatEndRef} />
+                      </div>
+
+                      {/* Suggestion apply banner */}
+                      {budgetAgent.suggestedBudget != null && (
+                        <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-t border-zinc-100 bg-zinc-50">
+                          <span className="text-xs text-zinc-600">
+                            Suggested budget: <span className="font-semibold text-zinc-800">{fmtCurrency(budgetAgent.suggestedBudget)}</span>
+                          </span>
+                          {budgetApplied ? (
+                            <span className="text-xs text-green-600 font-medium">Applied ✓</span>
+                          ) : (
+                            <button
+                              onClick={() => applyBudgetSuggestion(budgetAgent.suggestedBudget!)}
+                              className="text-xs font-semibold text-white px-2.5 py-1 rounded-lg transition-colors"
+                              style={{ backgroundColor: SAGE }}
+                            >
+                              Apply
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 px-3 py-2.5 border-t border-zinc-100 bg-white">
+                        <input
+                          type="text"
+                          value={budgetAgent.draft}
+                          onChange={e => setBudgetAgent(a => a && { ...a, draft: e.target.value })}
+                          onKeyDown={e => e.key === 'Enter' && sendBudgetAgentMessage()}
+                          placeholder="Reply…"
+                          disabled={budgetAgent.status === 'loading'}
+                          className="flex-1 text-xs border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-zinc-400 disabled:opacity-50"
+                        />
+                        <button
+                          onClick={sendBudgetAgentMessage}
+                          disabled={!budgetAgent.draft.trim() || budgetAgent.status === 'loading'}
+                          className="p-1.5 rounded-lg text-white disabled:opacity-40 transition-colors"
+                          style={{ backgroundColor: SAGE }}
+                        >
+                          <Send className="w-3 h-3" />
+                        </button>
                       </div>
                     </div>
                   )}
