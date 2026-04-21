@@ -58,7 +58,7 @@ export function EffortBudgetTab({ projects }: Props) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-zinc-300 pt-1 border-t border-zinc-100">No projects scheduled</p>
+                <p className="text-xs text-zinc-400 italic pt-1 border-t border-zinc-100">Nothing scheduled this quarter.</p>
               )}
             </div>
           )

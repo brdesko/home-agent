@@ -3,8 +3,8 @@ import { TaskList, type Task } from './task-list'
 type BudgetLine = {
   id: string
   description: string
-  amount: number
-  line_type: string
+  estimated_amount: number | null
+  actual_amount: number | null
 }
 
 export type TimelineEventItem = {
@@ -24,6 +24,9 @@ export type Project = {
   target_year: number | null
   target_quarter: number | null
   description: string | null
+  target_budget: number | null
+  actual_spend: number | null
+  parent_project_id: string | null
   tasks: Task[]
   budget_lines: BudgetLine[]
   timeline_events: TimelineEventItem[]

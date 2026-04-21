@@ -25,234 +25,157 @@ governing architectural principles.
 
 ## Phased roadmap
 
-### Phase 1 — The Skeleton (active)
+### Phase 4 — Aesthetics, Maneuverability & Access (active)
+
+Polish the product for real daily use: UI feel, navigation, creating new
+content from the UI directly, and extending access to Erin.
+
+**Themes:**
+
+**1. UI aesthetics and polish**
+- Consistent typographic hierarchy and spacing
+- Color and tone aligned with "editorial and warm, not generic SaaS"
+- Mobile-responsive layouts (currently desktop-first)
+- Empty states, loading states, error states that feel considered
+
+**2. Maneuverability**
+- Create new projects directly from Project Management UI (not agent-only)
+- Create new tasks directly from project slide-over
+- Quick-add ongoing tasks from To-Do tab
+- Keyboard shortcuts for common actions
+- Deep links / URL state for tabs so browser back works correctly
+
+**3. New project from scratch practice**
+- Use the full product to add a real new project end-to-end
+- Identify friction points and fix them
+- Validate the Agent's create/modify flow against a live project
+
+**4. Extending access**
+- Confirm Erin's account is set up and has Owner access
+- Verify RLS enforcement (a second browser session sees the same data)
+- Plan Viewer access pattern for parents (read-only, no budget)
+
+**5. Overnight QA & improvement agent**
+An autonomous agent that runs while you sleep, acts as a QA engineer and
+product reviewer, and leaves a morning report. Two outputs:
+- **QA report** — `QA_REPORTS/YYYY-MM-DD.md`: broken flows, type errors,
+  edge cases, RLS gaps, API error handling gaps, UI inconsistencies found
+- **Improvement log** — suggested fixes and enhancements ranked by impact,
+  written as actionable change descriptions
+- **Optional v2 branch** — agent applies straightforward fixes to a git
+  worktree and opens a draft PR; user reviews and merges or discards
+
+Implementation approach:
+- Claude Code CLI running in non-interactive mode via a script or Windows
+  Task Scheduler job
+- Uses worktree isolation so in-progress fixes don't touch the working tree
+- Report and branch link left for morning review
+- Scope of each run configurable (QA-only vs. QA + fixes)
+
+This replaces the manual reviewer subagent planned in CLAUDE.md and extends
+it to run autonomously rather than on-demand.
+
+**Parking lot (known deferred items):**
+- Firecrawl URL crawling — proper JS-rendered scraping for Zillow/Redfin
+  with screenshot support. Needs `FIRECRAWL_API_KEY` from firecrawl.dev.
+- Hardcoded `PROPERTY_ID` — must become a per-user lookup before
+  multi-property or sharing features ship
+- Visual/zones — satellite + floor plan property map, zone-to-asset linking
+- Onboarding wizard — new user links a Zillow/Redfin URL, agent parses it
+  and asks for a first goal
+
+---
+
+### Phase 3 — The Consultant ✓ Complete
+
+Agent gained broader capabilities and the Notebook became fully interactive.
+
+**Built:**
+- Interactive task status cycling in the Notebook UI (click to advance)
+- Agent can modify existing projects, tasks, goals, and budgets
+- Goals layer with named goals, priority hierarchy (drag to reorder), rank badges
+- Budget model unified (estimated + actual per line item; target_budget on projects and goals)
+- Parent project relationships (design budget flows into renovation estimate)
+- Project archive view (Active / Completed / Cancelled tabs)
+- Historical project entry form ("Add past project")
+- To-Do restructure: unified timeline list (This Week / Rest of Quarter),
+  three category badges (Suggested / Ongoing / Project), task expansion with
+  Go to project, Add cost line, Ask Agent actions; category filter; progress bars
+- Ongoing tasks table (recurring seasonal tasks, separate from project tasks)
+- Home Details page (/home-details) with four tabs:
+  - Details — editable property fields (acreage, year built, sq footage, heating, well/septic)
+  - Documents — Supabase Storage file management with signed URLs
+  - Assets — full CRUD (make, model, serial, install date, last serviced, location)
+  - Photos — stub (deferred)
+- Agent document parsing — upload a PDF or paste text → agent extracts
+  property details, assets, and suggested projects with tasks → confirmation
+  modal with per-item checkboxes before any writes
+- Suggestions API enhanced with property details + asset inventory context
+
+**Migrations shipped:** 011–021
+
+---
+
+### Phase 2 — The First Agent Workflow ✓ Complete
+
+Agent with add-project capability, including tasks, budget lines, and
+timeline events. Deployed to Vercel.
+
+---
+
+### Phase 1 — The Skeleton ✓ Complete
 
 User and Property scaffolding with RLS. Core domain-agnostic data model.
-Basic Notebook UI. Hand-seeded farm plan as the first domain. No Agent.
+Basic Notebook UI. Hand-seeded farm plan. Auth via magic link.
 
-Goal: prove the abstractions hold when confronted with real content.
+**Migrations shipped:** 001–010
 
-**Exit criteria:**
-- User can sign in as an Owner of the 5090 Durham Rd Property.
-- Erin can sign in as an Owner of the same Property.
-- A full farm plan (projects, tasks, budget lines, timeline) is visible in
-  the Notebook UI.
-- A second domain (e.g., a stub kitchen renovation Project) can be added
-  manually via the database with no schema changes.
-- RLS policies in place: an imagined second user cannot read this
-  Property's data.
-
-### Phase 2 — The First Agent Workflow
-
-Add the Agent with one capability: "add a new project to the Notebook" via
-conversation. Target the "home gym in Barn 2" example as the proof.
-
-**Exit criteria:** user says "add a home gym project in Barn 2" in chat;
-Agent asks clarifying questions; Agent proposes a Notebook change; user
-approves; change commits; Notebook shows the new project wired into the
-Property's budget and timeline.
-
-### Phase 3 — The Consultant
-
-Agent gains broader capabilities: modify existing projects, respond to
-disruptions, suggest proactively, track assets with predictable maintenance.
-
-Planned slices:
-- **Slice 1:** Tasks interactive in Notebook UI (click to complete/change
-  status). Agent can modify existing projects and tasks via conversation.
-- **Slice 2:** Interactive task completion — completing a decision-point task
-  surfaces an Agent prompt ("How did it go?"). Proves the trigger mechanism.
-- **Slice 3:** Cascade logic — Agent reads full project context after a
-  completion prompt and proposes changes to dependent tasks (add, modify,
-  reprioritize). Commits on approval. The kitchen-quote scenario.
-- **Slice 4:** Pattern-aware suggestions — Agent reads project/task history
-  to infer household preferences (e.g. DIY vs. purchased) and surfaces
-  relevant suggestions when proposing tasks. No separate storage needed;
-  Claude reasons from context. Example: "You've handled all yardwork DIY so
-  far — want to take the same approach here, or bring someone in?"
-
-Exit criteria: Agent can respond to a real disruption (e.g. quote comes in
-over budget) and produce a revised plan the owners accept.
+---
 
 ## Stack
 
-- **Next.js 15** (App Router) — unified frontend and backend, good patterns
-  for AI streaming (matters for Phase 2), easy Vercel deploy.
+- **Next.js 15** (App Router) — unified frontend and backend
 - **Supabase** — Postgres + auth + RLS. Free tier covers personal use.
-  RLS matters for getting multi-tenancy right from the start.
-- **TypeScript**, **Tailwind**, **shadcn/ui** — standard choices, good
-  Claude Code support, large community.
-- **Anthropic API** (Phase 2+) — the Agent runs on Claude via the API.
-- **Vercel** — hosting. Free tier covers personal use.
+- **TypeScript**, **Tailwind**, **shadcn/ui**
+- **Anthropic API** — Agent runs on Claude Sonnet 4.6
+- **Vercel** — hosting
 
-## Data model — early draft
+## Data model — current state
 
 ### Platform-level
+- **User** — Supabase Auth
+- **Property** — address, name, detail fields (acreage, year_built, sq_footage, heat_type, well_septic, details_notes)
+- **PropertyMember** — User ↔ Property with role (owner | viewer)
 
-- **User** — an authenticated individual. Owned by Supabase Auth.
-- **Property** — a property someone manages. Has an address and a name.
-- **PropertyMember** — links a User to a Property with a role
-  (`owner` or `viewer`). Many-to-many.
+### Property-scoped
+- **Project** — domain, status, priority, target_budget, actual_spend, parent_project_id, goal_id
+- **Task** — title, status, due_date, project_id
+- **Asset** — name, asset_type, make, model, serial_number, install_date, last_serviced_at, location, notes
+- **BudgetLine** — description, estimated_amount, actual_amount, project_id (owner-only)
+- **TimelineEvent** — title, event_date, project_id
+- **Goal** — name, description, target_budget, sort_order (drag-ordered priority)
+- **QuarterlyBudget** — year, quarter, allocated, notes (owner-only)
+- **OngoingTask** — title, description, recurrence, active_months[]
+- **SavedReference** — title, url, notes
+- **CalendarEvent** — title, start_date, end_date, type (vacation/holiday/busy/sale_window/other), notes
+- **Purchase** — item_name, vendor, price, purchased_at, project_id (nullable), category, notes
 
-### Property-scoped entities
-
-- **Project** — a bounded effort on a Property. Has a domain tag
-  (`farm`, `renovation`, `maintenance`, etc.), status, priority.
-- **Task** — a unit of work within a Project. Has an owner (a User who is a
-  Property Member), optional due window, status.
-- **Asset** — a physical thing on the Property that Projects can depend on
-  (barn, greenhouse, garden bed, mower). Has a maintenance profile (Phase 3).
-- **BudgetLine** — an expected or actual spend within a Project. Rolls up to
-  Property budget. **RLS-sensitive: Owners only.**
-- **TimelineEvent** — a dated thing (plant tomatoes, move sheep, start
-  renovation). Belongs to a Project or Property. Rolls up to a calendar.
-- **Note** — freeform text attached to any other entity.
-
-### Property-level aggregates
-
-- **Budget** — Property-level totals and constraints (income, reserve,
-  category caps). **RLS-sensitive: Owners only.**
-- **Capacity** — available hours per week, seasonal variation. Projects draw
-  against this.
-
-### Domain-specific (farm only, for now)
-
-- **Crop**, **Planting**, **Harvest** — seeded for the farm plan. Scoped to
-  the farm domain. Not part of core.
-
-### RLS boundary summary
-
-- Users see only Properties they are a Member of.
-- Within a Property, Owners see everything. Viewers see everything except
-  anything tagged RLS-sensitive (Budget, BudgetLine, and anything similar
-  we add later).
-- Only Owners can write.
-
-Schema gets more specific as we implement. This is a sketch.
-
-## Active slice — Phase 3, Slice 1
-
-**Goal:** Agent gains the ability to modify existing projects and tasks —
-update status, priority, description, add tasks to an existing project.
-Proves the modify path without yet tackling proactive suggestions.
-
-**Steps:** TBD — to be planned at the start of this slice.
-
----
-
-## Completed — Phase 2 (Slices 1–2)
-
-Agent with add-project capability, including tasks, budget lines, and
-timeline events. Deployed to Vercel. Phase 2 exit criteria met.
-
----
-
-## Completed — Phase 1, Slice 1
-
-**Goal:** stand up the project with Next.js, connect Supabase, set up auth
-and the `User`/`Property`/`PropertyMember` tables with RLS. Get a simple
-authenticated landing page that says "Welcome, [your name]. You are an
-Owner of 5090 Durham Rd."
-
-**Steps:**
-
-1. Initialize Next.js 15 project in current directory.
-2. Set up Tailwind and shadcn/ui.
-3. Create Supabase project (free tier) and connect it.
-4. Define `users` (handled by Supabase Auth), `properties`, and
-   `property_members` tables with RLS policies.
-5. Seed: one Property (5090 Durham Rd), two Users (you, Erin), two
-   PropertyMember rows (both Owners).
-6. Build basic auth flow — email magic link.
-7. Build a minimal landing page that reads the current User's Properties and
-   displays them, confirming RLS works.
-8. Commit and push to GitHub; deploy to Vercel.
-
-**Not in this slice:** Projects, Tasks, Budget, any UI polish, any farm
-content, any Viewer role features.
-
-**Why this slice:** it's deliberately small. It proves the full stack works
-end to end (Next.js, Supabase, Auth, RLS, Vercel) before we build on top of
-it. If any of these steps reveal a problem, we'd much rather find it now.
-
-**Scope creep watch:** if you find yourself wanting to add Projects or Tasks
-"while we're here," stop. Finish this slice cleanly first.
-
-## Deferred features (captured, not yet sliced)
-
-### Goals layer and summary UI
-The Notebook needs a layer *above* projects: named **Goals** — high-level
-outcomes that multiple projects contribute toward (e.g. "Working animal farm,"
-"Sustainable garden," "Fully renovated main house"). Goals keep priorities
-visible as the project list grows.
-
-Required work:
-- Data model: `goals` table (name, description, status, priority) with an
-  optional `goal_id` FK on `projects` so projects roll up to a Goal.
-- Summary UI: top-level tabs for Active Projects, Budget & Breakdown, and
-  Goals — so the big picture is always one click away from the detail view.
-- Agent awareness: when proposing or modifying projects, Agent should surface
-  which Goal is affected and flag if a change conflicts with a stated priority.
-
-This should be designed before the Notebook UI gets much more complex, and
-the data model change (adding `goal_id` to `projects`) is a migration that
-gets easier to do while the table is still small.
-
-Suggested timing: introduce `goals` table in Phase 3 Slice 2 or 3, alongside
-the interactive completion work, so the Agent can reference goals when asking
-"how did it go?" follow-up questions.
-
-### Property Map view (Phase 4+)
-A visual tab showing a spatial representation of the 5.3-acre property —
-zones (barn area, garden, pasture, main house, pool, etc.) that can be
-clicked to drill into associated assets, projects, and completion status.
-
-Requires: property zones as a data concept (polygons or named areas linked
-to assets and projects), and a map/diagram UI (SVG-based custom diagram or
-a mapping library). Design when the data model is stable and the Goals +
-summary UI layers are in place.
-
----
-
-## Open questions
-
-- **Email magic link vs. password.** Magic links are friendlier for a
-  two-person household tool and don't require password hygiene. Going with
-  magic links unless a reason emerges.
-- **How the Agent proposes changes (Phase 2).** Diff-style preview is the
-  right pattern. UX variants to be explored later.
-- **Design direction.** The v1 artifact used an "agricultural almanac"
-  aesthetic (cream paper, serif display font). It suited farm content; needs
-  to generalize for renovations and other domains. Revisit when we start
-  building real UI beyond the landing page.
-- **Where to seed domain content.** Farm-specific seed data (crops, planting
-  calendar) — probably a separate migration or a seeded JSON file. Decide
-  in Slice 2.
-- **Subagent adoption timing.** User's colleagues use parallel subagents for
-  dramatic speedup. We're staging adoption deliberately (see `CLAUDE.md` →
-  "Automation, subagents, and tooling"). Revisit at end of Phase 1 with
-  `reviewer` subagent as first addition.
-- **Slash commands to define as patterns emerge.** Candidates:
-  `/session-start`, `/review`, `/commit-slice`. Add to `.claude/commands/`
-  when we've run the underlying workflow manually enough times to codify
-  it.
+### Storage
+- **Home Agent** bucket — documents at `{property_id}/{filename}`, signed URLs for access
 
 ## Decisions log
 
 - **2026-04-20:** Product named "Home Management Platform" (HMP). Two layers
-  per property: "Property Notebook" and "Property Agent." Top-level entities
-  are User and Property; Property is the scoping unit for all content.
-- **2026-04-20:** Committed to domain-agnostic architecture with farm as
-  first seeded domain, rather than enumerating domains upfront.
-- **2026-04-20:** Multi-tenant-ready data model from day one with RLS
-  enabled; sharing UI (invitations, property switcher) deferred until later
-  phase.
-- **2026-04-20:** Two roles within a Property: Owner (full access) and
-  Viewer (read-only, no budget visibility). User and Erin are both Owners of
-  5090 Durham Rd. Parents anticipated as Viewers once sharing ships.
+  per property: "Property Notebook" and "Property Agent."
+- **2026-04-20:** Domain-agnostic architecture; farm as first seeded domain.
+- **2026-04-20:** Multi-tenant-ready with RLS; sharing UI deferred.
+- **2026-04-20:** Two roles: Owner (full) and Viewer (read-only, no budget).
 - **2026-04-20:** Stack locked: Next.js 15 + Supabase + TypeScript + Tailwind
   + shadcn/ui + Anthropic API + Vercel.
-- **2026-04-20:** Phased roadmap agreed (Skeleton → First Agent Workflow →
-  Consultant).
-- **2026-04-20:** Staged subagent adoption: single agent in Phase 1, reviewer
-  subagent at end of Phase 1, specialists in Phase 2, parallelism in Phase 3+.
+- **2026-04-20:** Staged subagent adoption — single agent through Phase 3,
+  revisit in Phase 4.
+- **2026-04-20:** Budget lines unified to single rows with estimated_amount
+  and actual_amount (replacing separate estimated/actual row types).
+- **2026-04-20:** Document parsing uses Claude's native PDF/image reading +
+  a paste-text fallback for JS-rendered sites (Zillow/Redfin block scraping).
+  Firecrawl parked for later.

@@ -4,6 +4,8 @@ export type Goal = {
   description: string | null
   status: string
   priority: string
+  target_budget: number | null
+  sort_order: number
 }
 
 type GoalWithProgress = Goal & {
@@ -30,7 +32,7 @@ export function GoalsPanel({ goals }: { goals: GoalWithProgress[] }) {
   return (
     <section className="border-b border-zinc-100 px-6 py-5">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">Goals</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600 mb-3">Goals</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {goals.map(goal => (
             <div key={goal.id} className="border border-zinc-200 rounded-lg px-4 py-3 space-y-2">
@@ -54,7 +56,7 @@ export function GoalsPanel({ goals }: { goals: GoalWithProgress[] }) {
                   </div>
                   <div className="h-1 bg-zinc-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-green-400 rounded-full transition-all"
+                      className="h-full rounded-full transition-all" style={{ backgroundColor: 'var(--sage)' }}
                       style={{ width: `${Math.round((goal.completeProjects / goal.totalProjects) * 100)}%` }}
                     />
                   </div>
@@ -62,7 +64,7 @@ export function GoalsPanel({ goals }: { goals: GoalWithProgress[] }) {
               )}
 
               {goal.totalProjects === 0 && (
-                <p className="text-xs text-zinc-400">No projects assigned yet.</p>
+                <p className="text-xs text-zinc-400 italic">No projects assigned yet.</p>
               )}
             </div>
           ))}

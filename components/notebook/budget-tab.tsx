@@ -141,7 +141,7 @@ function FinancialsTab({ quarters: initial, isOwner }: { quarters: QuarterlyBudg
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr>
-              <th className="text-left text-xs font-semibold uppercase tracking-widest text-zinc-400 pb-3 pr-6 w-40" />
+              <th className="text-left text-xs font-semibold uppercase tracking-widest text-zinc-600 pb-3 pr-6 w-40" />
               {slots.map(({ year, quarter }) => (
                 <th key={`${year}-${quarter}`} className="text-right text-xs font-semibold text-zinc-500 pb-3 px-3 min-w-[130px]">
                   Q{quarter} {year}
@@ -291,14 +291,15 @@ function PlanningTab({ quarters: budgetRows, projects }: { quarters: QuarterlyBu
                     {committed > 0 && (
                       <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all ${surplus !== null && surplus < 0 ? 'bg-red-400' : 'bg-blue-400'}`}
+                          className={`h-full rounded-full transition-all ${surplus !== null && surplus < 0 ? 'bg-red-400' : ''}`}
+                          style={surplus !== null && surplus < 0 ? undefined : { backgroundColor: 'var(--sage)' }}
                           style={{ width: `${Math.min(100, available > 0 ? (committed / available) * 100 : 100)}%` }}
                         />
                       </div>
                     )}
                   </>
                 ) : (
-                  <p className="text-xs text-zinc-300">No budget set for this quarter</p>
+                  <p className="text-xs text-zinc-400 italic">No budget set for this quarter.</p>
                 )}
               </div>
 
@@ -320,7 +321,7 @@ function PlanningTab({ quarters: budgetRows, projects }: { quarters: QuarterlyBu
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-zinc-300 pt-1 border-t border-zinc-100">No projects scheduled</p>
+                <p className="text-xs text-zinc-400 italic pt-1 border-t border-zinc-100">Nothing scheduled this quarter.</p>
               )}
             </div>
           )
@@ -330,7 +331,7 @@ function PlanningTab({ quarters: budgetRows, projects }: { quarters: QuarterlyBu
       {/* Unscheduled projects */}
       {unscheduled.length > 0 && (
         <div className="border border-dashed border-zinc-200 rounded-lg p-4 space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Unscheduled</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Unscheduled</h3>
           <ul className="space-y-1.5">
             {unscheduled.map(p => (
               <li key={p.id} className="flex items-center justify-between gap-2 text-xs">

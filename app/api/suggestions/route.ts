@@ -1,8 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-
-const PROPERTY_ID = 'a1b2c3d4-0000-0000-0000-000000000001'
+import { getPropertyId } from '@/lib/get-property-id'
 const LAT = 40.4537
 const LON = -75.0657
 
@@ -36,6 +35,9 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const PROPERTY_ID = await getPropertyId(supabase, user.id)
+  if (!PROPERTY_ID) return NextResponse.json({ error: 'No property found' }, { status: 404 })
+
   // Fetch weather (cache 1 hour)
   let weatherSummary = 'Weather data unavailable.'
   let weatherError: string | null = null
@@ -60,6 +62,37 @@ export async function GET() {
     console.error('[suggestions] weather exception:', weatherError)
   }
 
+  // Fetch property details for context
+  const { data: propData } = await supabase
+    .from('properties')
+    .select('acreage, year_built, sq_footage, heat_type, well_septic, details_notes')
+    .eq('id', PROPERTY_ID)
+    .single()
+
+  const propertyContext = propData ? [
+    propData.acreage      ? `${propData.acreage} acres`              : '',
+    propData.year_built   ? `built ${propData.year_built}`           : '',
+    propData.sq_footage   ? `${propData.sq_footage} sq ft`           : '',
+    propData.heat_type    ? `${propData.heat_type} heat`             : '',
+    propData.well_septic  ? `water/sewer: ${propData.well_septic}`   : '',
+    propData.details_notes ? propData.details_notes                  : '',
+  ].filter(Boolean).join('; ') : ''
+
+  // Fetch assets for maintenance context
+  const { data: assetRows } = await supabase
+    .from('assets')
+    .select('name, asset_type, install_date, last_serviced_at, notes')
+    .eq('property_id', PROPERTY_ID)
+    .order('asset_type')
+
+  const currentYear = new Date().getFullYear()
+  const assetList = (assetRows ?? []).map(a => {
+    const age     = a.install_date     ? `installed ${new Date(a.install_date).getFullYear()} (${currentYear - new Date(a.install_date).getFullYear()} yrs old)` : ''
+    const service = a.last_serviced_at ? `last serviced ${new Date(a.last_serviced_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 'no service record'
+    const parts   = [a.asset_type, age, service, a.notes].filter(Boolean).join(', ')
+    return `- ${a.name}: ${parts}`
+  }).join('\n') || '(no assets recorded)'
+
   // Fetch active tasks with project context
   const { data: taskRows } = await supabase
     .from('tasks')
@@ -82,12 +115,16 @@ export async function GET() {
   const anthropic = new Anthropic()
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 300,
+    max_tokens: 400,
     messages: [{
       role: 'user',
-      content: `You are a property assistant for a 5.3-acre property in Pipersville, PA managed by Brady and Erin.
+      content: `You are a property assistant for a property in Pipersville, PA managed by Brady and Erin.
 
 Today is ${today}.
+${propertyContext ? `\nProperty details: ${propertyContext}` : ''}
+
+Property assets and systems:
+${assetList}
 
 5-day weather forecast:
 ${weatherSummary}
@@ -95,7 +132,7 @@ ${weatherSummary}
 Active tasks:
 ${taskList}
 
-Give exactly 2-3 short, specific, actionable suggestions that account for the weather forecast. Prioritize outdoor tasks that would be affected by rain or temperature. Write each as a single plain sentence on its own line. No bullets, no numbering, no headers.`,
+Give exactly 3 short, specific, actionable suggestions. Draw from all available context: weather, asset ages and service records, property characteristics, and active tasks. Flag overdue maintenance on aging assets, weather-sensitive outdoor work, and anything that would be easy to miss. Be specific — name the asset or system when relevant. Write each as a single plain sentence on its own line. No bullets, no numbering, no headers.`,
     }],
   })
 

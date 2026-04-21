@@ -32,10 +32,8 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center">
       <div className="max-w-sm w-full space-y-6 px-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Sign in</h1>
-          <p className="text-muted-foreground text-sm">
-            Home Management Platform
-          </p>
+          <h1 className="text-2xl font-display">Parcel</h1>
+          <p className="text-muted-foreground text-sm">Sign in to your property</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input

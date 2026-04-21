@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-
-const PROPERTY_ID = 'a1b2c3d4-0000-0000-0000-000000000001'
+import { getPropertyId } from '@/lib/get-property-id'
 
 type ExpenseItem = { description: string; amount: number }
 
@@ -9,6 +8,9 @@ export async function PUT(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const propertyId = await getPropertyId(supabase, user.id)
+  if (!propertyId) return NextResponse.json({ error: 'No property found' }, { status: 404 })
 
   const body = await req.json() as {
     year: number
@@ -27,7 +29,7 @@ export async function PUT(req: NextRequest) {
   const { data, error } = await supabase
     .from('quarterly_budget')
     .upsert(
-      { property_id: PROPERTY_ID, year, quarter, ...fields },
+      { property_id: propertyId, year, quarter, ...fields },
       { onConflict: 'property_id,year,quarter' }
     )
     .select()

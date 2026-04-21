@@ -14,7 +14,11 @@
       "Bash(npm run *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
       "Bash(curl *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(cmd /c \"npx tsc --noEmit 2>&1\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\brdes\\\\desktop\\\\claude\\\\home-agent\\\\app\\\\api\\\\projects\\\\[id]\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\brdes\\\\desktop\\\\claude\\\\home-agent\\\\app\\\\api\\\\budget-lines\\\\[id]\")",
+      "Bash(cmd /c \"npx tsc --noEmit 2>&1 | head -40\")"
     ]
   },
   "enabledMcpjsonServers": [

@@ -6,13 +6,17 @@ import { type TimelineEvent } from './timeline-panel'
 import { type Goal } from './goals-panel'
 import { type QuarterlyBudget } from './budget-tab'
 import { ProjectManagementTab } from './tabs/project-management-tab'
-import { TodoTab } from './tabs/todo-tab'
+import { TodoTab, type OngoingTask } from './tabs/todo-tab'
 import { DashboardTab } from './tabs/dashboard-tab'
+import { OverviewTab } from './tabs/overview-tab'
+import { CalendarTab, type CalendarEvent } from './tabs/calendar-tab'
 
 type GoalWithProgress = Goal & {
   totalProjects: number
   activeProjects: number
   completeProjects: number
+  estimatedSpend: number
+  actualSpend: number
 }
 
 type Props = {
@@ -20,15 +24,17 @@ type Props = {
   events: TimelineEvent[]
   goals: GoalWithProgress[]
   quarterlyBudgets: QuarterlyBudget[]
+  ongoingTasks: OngoingTask[]
+  calendarEvents: CalendarEvent[]
   grouped: Record<string, Project[]>
   isOwner: boolean
 }
 
-const TABS = ['Project Management', 'To-Do', 'Dashboard'] as const
+const TABS = ['Overview', 'To-Do', 'Calendar', 'Projects', 'Planning'] as const
 type Tab = typeof TABS[number]
 
-export function NotebookTabs({ projects, goals, quarterlyBudgets, isOwner }: Props) {
-  const [tab, setTab] = useState<Tab>('Project Management')
+export function NotebookTabs({ projects, events, goals, quarterlyBudgets, ongoingTasks, calendarEvents, isOwner }: Props) {
+  const [tab, setTab] = useState<Tab>('Overview')
 
   return (
     <div>
@@ -37,8 +43,9 @@ export function NotebookTabs({ projects, goals, quarterlyBudgets, isOwner }: Pro
         <div className="max-w-6xl mx-auto flex gap-0">
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)}
+              style={tab === t ? { borderBottomColor: 'var(--sage)' } : {}}
               className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                tab === t ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                tab === t ? 'text-zinc-800' : 'border-transparent text-zinc-400 hover:text-zinc-600'
               }`}>
               {t}
             </button>
@@ -47,13 +54,25 @@ export function NotebookTabs({ projects, goals, quarterlyBudgets, isOwner }: Pro
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
-        {tab === 'Project Management' && (
-          <ProjectManagementTab projects={projects} goals={goals} isOwner={isOwner} />
+        {tab === 'Overview' && (
+          <OverviewTab
+            projects={projects}
+            events={events}
+            goals={goals}
+            quarterlyBudgets={quarterlyBudgets}
+            ongoingTasks={ongoingTasks}
+          />
         )}
         {tab === 'To-Do' && (
-          <TodoTab projects={projects} />
+          <TodoTab projects={projects} goals={goals} ongoingTasks={ongoingTasks} isOwner={isOwner} />
         )}
-        {tab === 'Dashboard' && (
+        {tab === 'Calendar' && (
+          <CalendarTab initialEvents={calendarEvents} timelineEvents={events} />
+        )}
+        {tab === 'Projects' && (
+          <ProjectManagementTab projects={projects} goals={goals} isOwner={isOwner} />
+        )}
+        {tab === 'Planning' && (
           <DashboardTab goals={goals} projects={projects} quarters={quarterlyBudgets} isOwner={isOwner} />
         )}
       </div>

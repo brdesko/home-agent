@@ -15,7 +15,10 @@ export default function SignOutButton() {
   return (
     <button
       onClick={handleSignOut}
-      className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
+      className="text-[12px] transition-colors"
+      style={{ color: 'oklch(1 0 0 / 0.35)' }}
+      onMouseEnter={e => (e.currentTarget.style.color = 'oklch(1 0 0 / 0.70)')}
+      onMouseLeave={e => (e.currentTarget.style.color = 'oklch(1 0 0 / 0.35)')}
     >
       Sign out
     </button>

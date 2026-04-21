@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { type Goal } from '../goals-panel'
 import { type Project } from '../project-card'
 import { type QuarterlyBudget } from '../budget-tab'
-import { GoalsTab } from '../goals-tab'
 import { FinancialBudgetTab } from './financial-budget-tab'
 import { EffortBudgetTab } from './effort-budget-tab'
-import { getRollingQuarters, isBeyond, quarterLabel, fmtCurrency } from '../quarter-utils'
+import { GoalsTab } from '../goals-tab'
+import { getRollingQuarters, quarterLabel, fmtCurrency } from '../quarter-utils'
 
 type GoalWithProgress = Goal & {
   totalProjects: number
@@ -45,78 +45,84 @@ function riskLabel(risk: number): string {
 }
 
 function riskTextColor(risk: number): string {
-  if (risk < 0.4)  return 'text-green-700'
-  if (risk < 0.65) return 'text-amber-700'
-  if (risk < 0.85) return 'text-orange-700'
-  return 'text-red-600'
+  if (risk < 0.4)  return 'oklch(0.48 0.12 155)'
+  if (risk < 0.65) return 'oklch(0.52 0.14 75)'
+  if (risk < 0.85) return 'oklch(0.52 0.16 50)'
+  return 'oklch(0.52 0.20 22)'
 }
 
-const SUB_TABS = ['Financial Budget', 'Effort Budget'] as const
+function riskBg(risk: number): string {
+  if (risk < 0.4)  return 'oklch(0.97 0.02 155)'
+  if (risk < 0.65) return 'oklch(0.98 0.02 85)'
+  if (risk < 0.85) return 'oklch(0.98 0.02 55)'
+  return 'oklch(0.98 0.02 22)'
+}
+
+function riskBorder(risk: number): string {
+  if (risk < 0.4)  return 'oklch(0.85 0.07 155)'
+  if (risk < 0.65) return 'oklch(0.85 0.08 85)'
+  if (risk < 0.85) return 'oklch(0.85 0.09 55)'
+  return 'oklch(0.85 0.10 22)'
+}
+
+function riskBarColor(risk: number): string {
+  if (risk < 0.4)  return 'oklch(0.60 0.14 155)'
+  if (risk < 0.65) return 'oklch(0.72 0.16 85)'
+  if (risk < 0.85) return 'oklch(0.68 0.18 50)'
+  return 'oklch(0.58 0.22 22)'
+}
+
+const SUB_TABS = ['Financial Budget', 'Effort Budget', 'Goals'] as const
 type SubTab = typeof SUB_TABS[number]
 
 export function DashboardTab({ goals, projects, quarters, isOwner }: Props) {
   const [sub, setSub] = useState<SubTab>('Financial Budget')
 
-  const slots    = getRollingQuarters(4)
-  const active   = projects.filter(p => p.status !== 'cancelled')
-  const beyondPs = active.filter(p => isBeyond(slots, p.target_year, p.target_quarter))
+  const slots  = getRollingQuarters(4)
+  const active = projects.filter(p => p.status !== 'cancelled')
 
-  type RiskBucket = { label: string; slotPs: typeof projects; budget: number; committed: number; effortScore: number; financialRisk: number; effortRisk: number; combined: number }
-
-  const buckets: RiskBucket[] = [
-    ...slots.map(s => {
-      const slotPs    = active.filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
-      const qRow      = quarters.find(r => r.year === s.year && r.quarter === s.quarter)
-      const budget    = qRow ? quarterBudget(qRow) : 0
-      const committed = slotPs.reduce((sum, p) => sum + p.budget_lines.filter(b => b.line_type === 'estimated').reduce((s2, b) => s2 + b.amount, 0), 0)
-      const effortScore = slotPs.reduce((sum, p) => sum + (EFFORT_SCORE[p.effort ?? ''] ?? 0), 0)
-      const financialRisk = budget > 0 ? Math.min(1, committed / budget) : 0
-      const effortRisk    = Math.min(1, effortScore / MAX_EFFORT)
-      const combined      = (financialRisk * 0.6 + effortRisk * 0.4)
-      return { label: quarterLabel(s.year, s.quarter), slotPs, budget, committed, effortScore, financialRisk, effortRisk, combined }
-    }),
-    (() => {
-      const effortScore   = beyondPs.reduce((sum, p) => sum + (EFFORT_SCORE[p.effort ?? ''] ?? 0), 0)
-      const committed     = beyondPs.reduce((sum, p) => sum + p.budget_lines.filter(b => b.line_type === 'estimated').reduce((s2, b) => s2 + b.amount, 0), 0)
-      const effortRisk    = Math.min(1, effortScore / MAX_EFFORT)
-      return { label: 'Beyond 1 Year', slotPs: beyondPs, budget: 0, committed, effortScore, financialRisk: 0, effortRisk, combined: effortRisk * 0.4 }
-    })(),
-  ]
+  const buckets = slots.map(s => {
+    const slotPs      = active.filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
+    const qRow        = quarters.find(r => r.year === s.year && r.quarter === s.quarter)
+    const budget      = qRow ? quarterBudget(qRow) : 0
+    const committed   = slotPs.reduce((sum, p) => sum + p.budget_lines.reduce((s2, b) => s2 + (b.estimated_amount ?? 0), 0), 0)
+    const effortScore = slotPs.reduce((sum, p) => sum + (EFFORT_SCORE[p.effort ?? ''] ?? 0), 0)
+    const financialRisk = budget > 0 ? Math.min(1, committed / budget) : 0
+    const effortRisk    = Math.min(1, effortScore / MAX_EFFORT)
+    const combined      = financialRisk * 0.6 + effortRisk * 0.4
+    return { label: quarterLabel(s.year, s.quarter), slotPs, budget, committed, effortScore, financialRisk, effortRisk, combined }
+  })
 
   return (
     <div className="space-y-10">
-      {/* Quarterly risk strip */}
+      {/* Quarterly risk strip — 4 quarters only */}
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Quarterly Risk</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Quarterly Risk</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {buckets.map(b => (
-            <div key={b.label} className="border border-zinc-200 rounded-lg p-3 space-y-2">
-              <p className="text-xs font-semibold text-zinc-600">{b.label}</p>
-              <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${riskColor(b.combined)}`} style={{ width: `${Math.round(b.combined * 100)}%` }} />
+            <div key={b.label} className="rounded-xl p-4 space-y-3"
+              style={{ backgroundColor: riskBg(b.combined), border: `1px solid ${riskBorder(b.combined)}` }}>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-zinc-700 leading-tight">{b.label}</p>
+                <span className="text-xs text-zinc-400 shrink-0 mt-0.5">{b.slotPs.length} project{b.slotPs.length !== 1 ? 's' : ''}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-medium ${riskTextColor(b.combined)}`}>{riskLabel(b.combined)}</span>
-                <span className="text-xs text-zinc-400">{b.slotPs.length} project{b.slotPs.length !== 1 ? 's' : ''}</span>
+              <div className="h-2.5 bg-white/60 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${Math.round(b.combined * 100)}%`, backgroundColor: riskBarColor(b.combined) }} />
               </div>
-              {b.budget > 0 && (
-                <p className="text-xs text-zinc-400">
-                  {fmtCurrency(b.committed)} / {fmtCurrency(b.budget)}
-                </p>
-              )}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold" style={{ color: riskTextColor(b.combined) }}>{riskLabel(b.combined)}</span>
+                {b.budget > 0 && (
+                  <p className="text-xs text-zinc-500">{fmtCurrency(b.committed)} / {fmtCurrency(b.budget)}</p>
+                )}
+              </div>
             </div>
           ))}
         </div>
         <p className="text-xs text-zinc-400">Risk combines financial exposure (60%) and effort load (40%).</p>
       </section>
 
-      {/* Goals progress */}
-      <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Goals</h2>
-        <GoalsTab goals={goals} projects={projects} />
-      </section>
-
-      {/* Budget sub-tabs */}
+      {/* Sub-tabs: Financial Budget | Effort Budget | Goals */}
       <section className="space-y-4">
         <div className="flex gap-0 border-b border-zinc-100">
           {SUB_TABS.map(t => (
@@ -128,6 +134,7 @@ export function DashboardTab({ goals, projects, quarters, isOwner }: Props) {
         </div>
         {sub === 'Financial Budget' && <FinancialBudgetTab quarters={quarters} projects={projects} isOwner={isOwner} />}
         {sub === 'Effort Budget'    && <EffortBudgetTab projects={projects} />}
+        {sub === 'Goals'            && <GoalsTab goals={goals} projects={projects} />}
       </section>
     </div>
   )

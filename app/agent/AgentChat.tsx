@@ -22,14 +22,18 @@ type ChangeResult = {
   summary: string
 }
 
-const GREETER = "What would you like to do with your Notebook today? I can add a new project, or update an existing one — status, tasks, priority, whatever needs changing."
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  const time = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
+  return `Good ${time} — what are we working on today?`
+}
 
 export function AgentChat() {
   const router       = useRouter()
   const searchParams = useSearchParams()
 
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: GREETER },
+    { role: 'assistant', content: getGreeting() },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -53,7 +57,7 @@ export function AgentChat() {
     if (taskTitle) setCascadeLabel(`Completed: ${taskTitle}`)
 
     // Greeter is sent to API for context but not shown; only the response is rendered
-    const greeter: Message = { role: 'assistant', content: GREETER }
+    const greeter: Message = { role: 'assistant', content: getGreeting() }
     const userMessage: Message = { role: 'user', content: ctx }
     const apiMessages = [greeter, userMessage]
     setMessages([{ role: 'assistant', content: 'Looking across your projects…' }])
@@ -64,7 +68,11 @@ export function AgentChat() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: apiMessages }),
     })
-      .then(r => r.json())
+      .then(async r => {
+        const data = await r.json().catch(() => ({}))
+        if (!r.ok) throw new Error(data.error ?? 'Server error')
+        return data
+      })
       .then(data => {
         setMessages([{ role: 'assistant', content: data.response }])
         if (data.projectCreated) setProjectCreated(data.projectCreated)
@@ -94,7 +102,8 @@ export function AgentChat() {
         body: JSON.stringify({ messages: next }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Server error')
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
       if (data.projectCreated) setProjectCreated(data.projectCreated)
@@ -114,22 +123,11 @@ export function AgentChat() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
-      <header className="border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-zinc-400">Property Agent</p>
-          <h1 className="text-xl font-semibold text-zinc-900">5090 Durham Rd</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link href="/references" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
-            References →
-          </Link>
-          <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
-            ← Notebook
-          </Link>
-        </div>
-      </header>
+    <div className="flex-1 flex flex-col overflow-hidden bg-background">
+
+      <div className="px-8 pt-7 pb-3 border-b border-zinc-100 shrink-0">
+        <h1 className="text-[28px] font-display text-zinc-800 leading-tight">Agent</h1>
+      </div>
 
       {/* Messages */}
       <main className="flex-1 overflow-y-auto px-6 py-8">

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>You're invited to Parcel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f4f1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      color: #27272a;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      max-width: 520px;
+      width: 100%;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .header {
+      background: oklch(0.50 0.10 155);
+      padding: 40px 40px 36px;
+      text-align: center;
+    }
+    .logo {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 28px;
+      font-weight: normal;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+    .logo-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      margin-left: 3px;
+      vertical-align: middle;
+      position: relative;
+      top: -2px;
+    }
+    .tagline {
+      color: rgba(255,255,255,0.75);
+      font-size: 13px;
+      margin-top: 6px;
+      letter-spacing: 0.3px;
+    }
+    .body {
+      padding: 40px;
+    }
+    .invite-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: oklch(0.96 0.03 155);
+      color: oklch(0.38 0.10 155);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .invite-badge::before {
+      content: '✦';
+      font-size: 9px;
+    }
+    h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 26px;
+      font-weight: normal;
+      color: #18181b;
+      line-height: 1.3;
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #52525b;
+      margin-bottom: 16px;
+    }
+    p:last-of-type { margin-bottom: 0; }
+    .property-card {
+      background: #fafaf9;
+      border: 1px solid #e4e4e7;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin: 28px 0;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .property-icon {
+      width: 36px;
+      height: 36px;
+      background: oklch(0.96 0.03 155);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: oklch(0.50 0.10 155);
+      font-size: 17px;
+    }
+    .property-info {
+      flex: 1;
+    }
+    .property-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #18181b;
+      margin-bottom: 2px;
+    }
+    .property-address {
+      font-size: 13px;
+      color: #71717a;
+    }
+    .property-invited-by {
+      font-size: 12px;
+      color: oklch(0.50 0.10 155);
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .cta-button {
+      display: block;
+      background: oklch(0.50 0.10 155);
+      color: #ffffff;
+      text-decoration: none;
+      text-align: center;
+      padding: 15px 28px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      margin: 32px 0 24px;
+      transition: opacity 0.15s;
+    }
+    .cta-button:hover { opacity: 0.88; }
+    .fine-print {
+      font-size: 12px;
+      color: #a1a1aa;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .fine-print a {
+      color: oklch(0.50 0.10 155);
+      text-decoration: none;
+    }
+    .footer {
+      border-top: 1px solid #f4f4f5;
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-brand {
+      font-family: Georgia, serif;
+      font-size: 14px;
+      color: #a1a1aa;
+    }
+    .footer-links {
+      display: flex;
+      gap: 16px;
+    }
+    .footer-links a {
+      font-size: 12px;
+      color: #a1a1aa;
+      text-decoration: none;
+    }
+    .footer-links a:hover { color: #71717a; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="logo">Parcel<span class="logo-dot"></span></div>
+      <div class="tagline">Your property, thoughtfully engineered</div>
+    </div>
+
+    <div class="body">
+      <div class="invite-badge">Personal Invitation</div>
+
+      <h1>Erin, you've been invited to your property notebook.</h1>
+
+      <p>Brady has set up a shared workspace for 5090 Durham Rd — a place to plan projects, track budgets, manage the farm, and keep everything about the property in one spot.</p>
+
+      <p>Parcel is built for exactly this: a home and property that has a lot going on. Instead of scattered notes and spreadsheets, everything lives together — organized by project, linked to a budget, and connected to a timeline.</p>
+
+      <div class="property-card">
+        <div class="property-icon">⌂</div>
+        <div class="property-info">
+          <div class="property-name">5090 Durham Rd</div>
+          <div class="property-address">Pipersville, PA · 5.3 acres</div>
+          <div class="property-invited-by">Brady has added you as an owner</div>
+        </div>
+      </div>
+
+      <p>You'll have full access to the notebook: projects, tasks, budgets, the farm plan, and the Agent — which you can talk to about anything on the property. Ask it what's on deck, what's budgeted, or just describe something you want to tackle and it'll help you shape it into a project.</p>
+
+      <a href="https://home-agent-git-main-brdeskos-projects.vercel.app/" class="cta-button">Open your property notebook →</a>
+
+      <p class="fine-print">
+        Use your email address to sign in — Brady set up your access.<br />
+        Questions? Reply to this message or reach Brady directly.
+      </p>
+    </div>
+
+    <div class="footer">
+      <div class="footer-brand">Parcel</div>
+      <div class="footer-links">
+        <a href="#">Your notebook</a>
+        <a href="#">The Agent</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -16,7 +16,7 @@ export function BudgetPanel({ projects }: { projects: Project[] }) {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Budget (Estimated)</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Budget (Estimated)</h2>
       <ul className="space-y-2">
         {rows.map(p => (
           <li key={p.name} className="flex items-baseline justify-between gap-2 text-sm">

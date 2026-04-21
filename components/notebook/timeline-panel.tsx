@@ -13,7 +13,7 @@ function shortDate(iso: string): string {
 export function TimelinePanel({ events }: { events: TimelineEvent[] }) {
   return (
     <div className="space-y-3">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Upcoming</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Upcoming</h2>
       {events.length === 0 ? (
         <p className="text-sm text-zinc-400">Nothing upcoming.</p>
       ) : (

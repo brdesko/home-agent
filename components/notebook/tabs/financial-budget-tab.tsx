@@ -13,7 +13,7 @@ function quarterBudget(q: QuarterlyBudget): number {
 }
 
 function projectEstimated(p: Project): number {
-  return p.budget_lines.filter(b => b.line_type === 'estimated').reduce((s, b) => s + b.amount, 0)
+  return p.budget_lines.reduce((s, b) => s + (b.estimated_amount ?? 0), 0)
 }
 
 const FIELD_LABELS: { key: keyof QuarterlyBudget; label: string; pct?: boolean }[] = [
@@ -34,7 +34,8 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
   const [rows, setRows] = useState<QuarterlyBudget[]>(initial)
   const [saving, setSaving] = useState<string | null>(null)
   const [expandedCalc, setExpandedCalc] = useState<string | null>(null)
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // localInputs: keyed by `${year}-${quarter}-${field}`, holds raw typed string
+  const [localInputs, setLocalInputs] = useState<Record<string, string>>({})
 
   const slots    = getRollingQuarters(4)
   const active   = projects.filter(p => p.status !== 'cancelled')
@@ -72,21 +73,40 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
     } finally { setSaving(null) }
   }
 
-  function scheduleAutosave(year: number, quarter: number) {
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => save(year, quarter), 800)
+  function inputKey(year: number, quarter: number, key: keyof QuarterlyBudget) {
+    return `${year}-${quarter}-${key}`
+  }
+
+  function handleFocus(year: number, quarter: number, key: keyof QuarterlyBudget) {
+    const row = getRow(year, quarter)
+    const val = row[key] as number
+    setLocalInputs(prev => ({ ...prev, [inputKey(year, quarter, key)]: val ? String(val) : '' }))
   }
 
   function handleChange(year: number, quarter: number, key: keyof QuarterlyBudget, raw: string) {
+    setLocalInputs(prev => ({ ...prev, [inputKey(year, quarter, key)]: raw }))
+  }
+
+  function handleBlur(year: number, quarter: number, key: keyof QuarterlyBudget) {
+    const ik = inputKey(year, quarter, key)
+    const raw = localInputs[ik] ?? ''
     const num = parseFloat(raw.replace(/[^0-9.]/g, '')) || 0
+    setLocalInputs(prev => { const next = { ...prev }; delete next[ik]; return next })
     updateLocal(year, quarter, { [key]: num } as Partial<QuarterlyBudget>)
-    scheduleAutosave(year, quarter)
+    save(year, quarter)
   }
 
   function handleItems(year: number, quarter: number, items: ExpenseItem[]) {
     const total = items.reduce((s, i) => s + (i.amount || 0), 0)
     updateLocal(year, quarter, { additional_expense_items: items, additional_expenses: total })
-    scheduleAutosave(year, quarter)
+    save(year, quarter)
+  }
+
+  function displayValue(year: number, quarter: number, key: keyof QuarterlyBudget): string {
+    const ik = inputKey(year, quarter, key)
+    if (ik in localInputs) return localInputs[ik]
+    const val = getRow(year, quarter)[key] as number
+    return val ? String(val) : ''
   }
 
   return (
@@ -96,7 +116,7 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr>
-              <th className="text-left text-xs font-semibold uppercase tracking-widest text-zinc-400 pb-3 pr-6 w-44" />
+              <th className="text-left text-xs font-semibold uppercase tracking-widest text-zinc-600 pb-3 pr-6 w-44" />
               {slots.map(s => (
                 <th key={`${s.year}-${s.quarter}`} className="text-right text-xs font-semibold text-zinc-500 pb-3 px-3 min-w-[130px]">
                   {quarterLabel(s.year, s.quarter)}
@@ -106,31 +126,45 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {FIELD_LABELS.map(({ key, label, pct }) => (
+            {FIELD_LABELS.map(({ key, label }) => (
               <tr key={key}>
                 <td className="py-2.5 pr-6 text-xs text-zinc-500 font-medium">{label}</td>
                 {slots.map(s => {
-                  const row = getRow(s.year, s.quarter)
-                  const val = row[key] as number
-                  const qk  = `${s.year}-${s.quarter}`
+                  const qk = `${s.year}-${s.quarter}`
                   if (key === 'additional_expenses') return (
                     <td key={qk} className="py-2.5 px-3 text-right">
                       <div className="flex flex-col items-end gap-1">
-                        <input disabled={!isOwner} value={val || ''} onChange={e => handleChange(s.year, s.quarter, key, e.target.value)} placeholder="0"
-                          className="w-full text-right bg-transparent border-b border-zinc-200 focus:border-zinc-400 focus:outline-none text-zinc-900 py-0.5 disabled:text-zinc-400" />
+                        <input
+                          disabled={!isOwner}
+                          value={displayValue(s.year, s.quarter, key)}
+                          onFocus={() => handleFocus(s.year, s.quarter, key)}
+                          onChange={e => handleChange(s.year, s.quarter, key, e.target.value)}
+                          onBlur={() => handleBlur(s.year, s.quarter, key)}
+                          placeholder="0"
+                          style={{ color: 'oklch(0.58 0.012 75)' }}
+                          className="w-full text-right bg-transparent border-b border-zinc-200 focus:border-zinc-400 focus:outline-none py-0.5 disabled:text-zinc-400"
+                        />
                         {isOwner && (
                           <button onClick={() => setExpandedCalc(expandedCalc === qk ? null : qk)} className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
                             {expandedCalc === qk ? 'hide' : 'breakdown'}
                           </button>
                         )}
-                        {expandedCalc === qk && <ExpenseCalculator items={row.additional_expense_items} onChange={items => handleItems(s.year, s.quarter, items)} />}
+                        {expandedCalc === qk && <ExpenseCalculator items={getRow(s.year, s.quarter).additional_expense_items} onChange={items => handleItems(s.year, s.quarter, items)} />}
                       </div>
                     </td>
                   )
                   return (
                     <td key={qk} className="py-2.5 px-3 text-right">
-                      <input disabled={!isOwner} value={val || ''} onChange={e => handleChange(s.year, s.quarter, key, e.target.value)} placeholder="0"
-                        className="w-full text-right bg-transparent border-b border-zinc-200 focus:border-zinc-400 focus:outline-none text-zinc-900 py-0.5 disabled:text-zinc-400" />
+                      <input
+                        disabled={!isOwner}
+                        value={displayValue(s.year, s.quarter, key)}
+                        onFocus={() => handleFocus(s.year, s.quarter, key)}
+                        onChange={e => handleChange(s.year, s.quarter, key, e.target.value)}
+                        onBlur={() => handleBlur(s.year, s.quarter, key)}
+                        placeholder="0"
+                        style={{ color: 'oklch(0.58 0.012 75)' }}
+                        className="w-full text-right bg-transparent border-b border-zinc-200 focus:border-zinc-400 focus:outline-none py-0.5 disabled:text-zinc-400"
+                      />
                     </td>
                   )
                 })}
@@ -149,7 +183,7 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
 
       {/* Project commitment by quarter */}
       <div className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Project Commitments</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Project Commitments</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {slots.map(s => {
             const slotPs   = active.filter(p => p.target_year === s.year && p.target_quarter === s.quarter)
@@ -170,7 +204,7 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
                 </div>
                 {budget > 0 && (
                   <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${surplus < 0 ? 'bg-red-400' : 'bg-blue-400'}`} style={{ width: `${pct}%` }} />
+                    <div className={`h-full rounded-full ${surplus < 0 ? 'bg-red-400' : ''}`} style={{ width: `${pct}%`, backgroundColor: surplus < 0 ? undefined : 'var(--sage)' }} />
                   </div>
                 )}
                 {slotPs.length > 0 ? (
@@ -183,7 +217,7 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-zinc-300">No projects scheduled</p>
+                  <p className="text-xs text-zinc-400 italic">Nothing scheduled this quarter.</p>
                 )}
               </div>
             )
@@ -205,7 +239,7 @@ export function FinancialBudgetTab({ quarters: initial, projects, isOwner }: Pro
           )}
         </div>
       </div>
-      <p className="text-xs text-zinc-400">Fields save automatically. Ask the Agent to move projects between quarters.</p>
+      <p className="text-xs text-zinc-400">Values save when you leave a field. Ask the Agent to move projects between quarters.</p>
     </div>
   )
 }
