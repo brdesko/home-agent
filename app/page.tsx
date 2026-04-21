@@ -31,8 +31,20 @@ export default async function HomePage() {
   if (!user) redirect('/login')
 
   const propertyId = await getPropertyId(supabase, user.id)
-  if (!propertyId) {
-    // All properties archived or none exist — show recovery screen
+  if (!propertyId) redirect('/login')
+
+  const { data: propertyData } = await supabase
+    .from('property_members')
+    .select('role, properties(id, name, address, is_archived)')
+    .eq('user_id', user.id)
+    .eq('property_id', propertyId)
+    .single()
+
+  if (!propertyData) redirect('/login')
+
+  const property = propertyData.properties as unknown as { id: string; name: string; address: string | null; is_archived: boolean }
+
+  if (property.is_archived) {
     return (
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-8 py-20 text-center space-y-6">
@@ -52,16 +64,6 @@ export default async function HomePage() {
     )
   }
 
-  const { data: propertyData } = await supabase
-    .from('property_members')
-    .select('role, properties(id, name, address)')
-    .eq('user_id', user.id)
-    .eq('property_id', propertyId)
-    .single()
-
-  if (!propertyData) redirect('/login')
-
-  const property = propertyData.properties as unknown as { id: string; name: string; address: string | null }
   const isOwner  = propertyData.role === 'owner'
   const today    = new Date().toISOString().split('T')[0]
 

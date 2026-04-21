@@ -35,15 +35,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       .map(m => m.properties as unknown as PropertyEntry | null)
       .filter((p): p is PropertyEntry => !!p)
 
-    // Filter out archived properties via a separate query
-    const { data: archivedRows } = await supabase
-      .from('properties')
-      .select('id')
-      .in('id', allIncluding.map(p => p.id))
-      .eq('is_archived', true)
-
-    const archivedIds = new Set((archivedRows ?? []).map(r => r.id))
-    allProperties = allIncluding.filter(p => !archivedIds.has(p.id))
+    if (allIncluding.length > 0) {
+      const { data: archivedRows } = await supabase
+        .from('properties')
+        .select('id')
+        .in('id', allIncluding.map(p => p.id))
+        .eq('is_archived', true)
+      const archivedIds = new Set((archivedRows ?? []).map(r => r.id))
+      allProperties = allIncluding.filter(p => !archivedIds.has(p.id))
+    }
 
     currentPropertyId = await getPropertyId(supabase, user.id)
     const current = allProperties.find(p => p.id === currentPropertyId)

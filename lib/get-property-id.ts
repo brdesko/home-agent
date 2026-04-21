@@ -8,38 +8,22 @@ export async function getPropertyId(supabase: SupabaseClient, userId: string): P
   const cookiePropertyId = cookieStore.get('parcel_property_id')?.value
 
   if (cookiePropertyId) {
-    const { data: membership } = await supabase
+    const { data } = await supabase
       .from('property_members')
       .select('property_id')
       .eq('property_id', cookiePropertyId)
       .eq('user_id', userId)
       .single()
-
-    if (membership?.property_id) {
-      const { data: prop } = await supabase
-        .from('properties')
-        .select('is_archived')
-        .eq('id', cookiePropertyId)
-        .single()
-      if (!prop?.is_archived) return cookiePropertyId
-    }
+    if (data?.property_id) return data.property_id
   }
 
-  // Fallback: first non-archived property this user is a member of
-  const { data: memberships } = await supabase
+  const { data } = await supabase
     .from('property_members')
     .select('property_id')
     .eq('user_id', userId)
     .order('created_at')
+    .limit(1)
+    .single()
 
-  for (const m of memberships ?? []) {
-    const { data: prop } = await supabase
-      .from('properties')
-      .select('is_archived')
-      .eq('id', m.property_id)
-      .single()
-    if (!prop?.is_archived) return m.property_id
-  }
-
-  return null
+  return data?.property_id ?? null
 }
