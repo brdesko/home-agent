@@ -27,7 +27,7 @@ type Props = {
   isOwner: boolean
 }
 
-const TABS = ['Details', 'Documents', 'Assets', 'Photos', 'Visual'] as const
+const TABS = ['Visual', 'Assets', 'Photos', 'Documents', 'Details'] as const
 type Tab = typeof TABS[number]
 
 export function HomeDetailsTabs({ property, docs, assets, isOwner }: Props) {

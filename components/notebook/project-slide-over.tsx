@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { type Project } from './project-card'
 import { type Goal } from './goals-panel'
 import { TaskList } from './task-list'
@@ -38,6 +39,13 @@ type Props = {
   onArchived?: (projectId: string, status: 'complete' | 'cancelled') => void
 }
 
+type PhotoReview = {
+  signedUrl: string
+  status: 'loading' | 'done'
+  messages: { role: 'user' | 'assistant'; content: string }[]
+  draft: string
+}
+
 export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose, onArchived }: Props) {
   const router = useRouter()
   const [targetBudget, setTargetBudget] = useState('')
@@ -48,6 +56,10 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
   const [confirmArchive, setConfirmArchive] = useState(false)
   const [archiving, setArchiving]           = useState(false)
   const [archiveError, setArchiveError]     = useState<string | null>(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoErr, setPhotoErr]             = useState<string | null>(null)
+  const [photoReview, setPhotoReview]       = useState<PhotoReview | null>(null)
+  const photoRef = useRef<HTMLInputElement>(null)
 
   async function doArchive(status: 'complete' | 'cancelled') {
     if (!project) return
@@ -84,6 +96,8 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
     setNewLine(null)
     setConfirmArchive(false)
     setArchiveError(null)
+    setPhotoReview(null)
+    setPhotoErr(null)
   }, [project?.id])
 
   useEffect(() => {
@@ -134,6 +148,79 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
     setLines(l => l.filter(x => x.id !== id))
     const res = await fetch(`/api/budget-lines/${id}`, { method: 'DELETE' })
     if (!res.ok) setLines(prev)
+  }
+
+  async function uploadPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !project) return
+    setPhotoUploading(true); setPhotoErr(null); setPhotoReview(null)
+    try {
+      const urlRes = await fetch('/api/photos/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name }),
+      })
+      const urlData = await urlRes.json()
+      if (!urlRes.ok) { setPhotoErr(urlData.error ?? 'Upload failed'); return }
+
+      const supabase = createClient()
+      const { error: upErr } = await supabase.storage
+        .from('Home Agent')
+        .uploadToSignedUrl(urlData.path, urlData.token, file, { contentType: file.type })
+      if (upErr) { setPhotoErr(upErr.message); return }
+
+      const { data: signed } = await supabase.storage
+        .from('Home Agent')
+        .createSignedUrl(urlData.path, 3600)
+      const signedUrl = signed?.signedUrl
+      if (!signedUrl) { setPhotoErr('Could not generate preview URL'); return }
+
+      setPhotoReview({ signedUrl, status: 'loading', messages: [], draft: '' })
+
+      const tasks = project.tasks.filter(t => t.status !== 'done').map(t => t.title)
+      const res = await fetch('/api/photos/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signedUrl,
+          projectContext: { name: project.name, description: project.description, tasks },
+          messages: [],
+        }),
+      })
+      const data = await res.json()
+      setPhotoReview(r => r && {
+        ...r,
+        status: 'done',
+        messages: [{ role: 'assistant', content: data.response }],
+      })
+    } catch (err) {
+      setPhotoErr(String(err))
+    } finally {
+      setPhotoUploading(false)
+      if (photoRef.current) photoRef.current.value = ''
+    }
+  }
+
+  async function sendPhotoReply() {
+    if (!photoReview || !photoReview.draft.trim()) return
+    const userMsg = { role: 'user' as const, content: photoReview.draft.trim() }
+    const nextMessages = [...photoReview.messages, userMsg]
+    setPhotoReview(r => r && { ...r, messages: nextMessages, draft: '', status: 'loading' })
+    try {
+      const res = await fetch('/api/photos/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signedUrl: photoReview.signedUrl, messages: nextMessages }),
+      })
+      const data = await res.json()
+      setPhotoReview(r => r && {
+        ...r,
+        status: 'done',
+        messages: [...nextMessages, { role: 'assistant', content: data.response }],
+      })
+    } catch {
+      setPhotoReview(r => r && { ...r, status: 'done' })
+    }
   }
 
   async function addLine() {
@@ -202,6 +289,63 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
                   <p className="text-xs text-zinc-400 italic">No tasks yet — ask the Agent or add one directly.</p>
                 ) : (
                   <TaskList tasks={project.tasks} projectName={project.name} projectId={project.id} />
+                )}
+              </div>
+
+              {/* Photos */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Photos</h3>
+                <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic" onChange={uploadPhoto} className="hidden" />
+                <button
+                  onClick={() => photoRef.current?.click()}
+                  disabled={photoUploading}
+                  className="px-3 py-1.5 text-xs font-medium border border-zinc-200 rounded-lg hover:border-zinc-400 transition-colors disabled:opacity-40"
+                >
+                  {photoUploading ? 'Uploading…' : '+ Add photo'}
+                </button>
+                {photoErr && <p className="text-xs text-red-500">{photoErr}</p>}
+
+                {photoReview && (
+                  <div className="border border-zinc-200 rounded-lg p-3 bg-zinc-50 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <img src={photoReview.signedUrl} alt="project photo"
+                        className="w-10 h-10 rounded object-cover border border-zinc-200 shrink-0" />
+                      <div className="min-w-0">
+                        {photoReview.status === 'loading' && (
+                          <p className="text-xs text-zinc-400 italic">Agent reviewing…</p>
+                        )}
+                        {photoReview.status === 'done' && photoReview.messages.map((m, i) => (
+                          <div key={i} className={`text-xs leading-relaxed ${m.role === 'user' ? 'text-zinc-500 italic' : 'text-zinc-700'}`}>
+                            {m.role === 'assistant' && <span className="text-zinc-400 font-medium uppercase tracking-wide text-[10px] block mb-0.5">Agent</span>}
+                            {m.content}
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={() => setPhotoReview(null)} className="text-zinc-300 hover:text-zinc-500 text-xs shrink-0">✕</button>
+                    </div>
+
+                    {photoReview.status === 'done' &&
+                      photoReview.messages[photoReview.messages.length - 1]?.role === 'assistant' &&
+                      photoReview.messages.length < 4 && (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={photoReview.draft}
+                          onChange={e => setPhotoReview(r => r && { ...r, draft: e.target.value })}
+                          onKeyDown={e => e.key === 'Enter' && sendPhotoReply()}
+                          placeholder="Reply…"
+                          className="flex-1 text-xs border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-zinc-400 bg-white"
+                        />
+                        <button
+                          onClick={sendPhotoReply}
+                          disabled={!photoReview.draft.trim()}
+                          className="px-2.5 py-1.5 text-xs font-medium bg-zinc-900 text-white rounded-lg hover:bg-zinc-700 disabled:opacity-40 transition-colors"
+                        >
+                          Send
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

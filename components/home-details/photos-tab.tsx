@@ -11,12 +11,22 @@ type Photo = {
   signedUrl: string | null
 }
 
+type ReviewMessage = { role: 'user' | 'assistant'; content: string }
+
+type ReviewState = {
+  photo: Photo
+  status: 'prompt' | 'loading' | 'done'
+  messages: ReviewMessage[]
+  draft: string
+}
+
 export function PhotosTab() {
   const [photos,    setPhotos]    = useState<Photo[]>([])
   const [loading,   setLoading]   = useState(true)
   const [uploading, setUploading] = useState(false)
   const [uploadErr, setUploadErr] = useState<string | null>(null)
   const [lightbox,  setLightbox]  = useState<Photo | null>(null)
+  const [review,    setReview]    = useState<ReviewState | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -29,7 +39,7 @@ export function PhotosTab() {
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploading(true); setUploadErr(null)
+    setUploading(true); setUploadErr(null); setReview(null)
     try {
       const urlRes = await fetch('/api/photos/upload-url', {
         method: 'POST',
@@ -47,12 +57,61 @@ export function PhotosTab() {
       if (upErr) { setUploadErr(upErr.message); return }
 
       const listRes = await fetch('/api/photos')
-      if (listRes.ok) setPhotos(await listRes.json())
+      if (listRes.ok) {
+        const fresh: Photo[] = await listRes.json()
+        setPhotos(fresh)
+        const uploaded = fresh[0]
+        if (uploaded?.signedUrl) {
+          setReview({ photo: uploaded, status: 'prompt', messages: [], draft: '' })
+        }
+      }
     } catch (e) {
       setUploadErr(String(e))
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  async function startReview() {
+    if (!review) return
+    setReview(r => r && { ...r, status: 'loading' })
+    try {
+      const res = await fetch('/api/photos/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signedUrl: review.photo.signedUrl, messages: [] }),
+      })
+      const data = await res.json()
+      setReview(r => r && {
+        ...r,
+        status: 'done',
+        messages: [{ role: 'assistant', content: data.response }],
+      })
+    } catch {
+      setReview(r => r && { ...r, status: 'done', messages: [{ role: 'assistant', content: 'Could not reach the Agent. Try again.' }] })
+    }
+  }
+
+  async function sendReply() {
+    if (!review || !review.draft.trim()) return
+    const userMsg: ReviewMessage = { role: 'user', content: review.draft.trim() }
+    const nextMessages = [...review.messages, userMsg]
+    setReview(r => r && { ...r, messages: nextMessages, draft: '', status: 'loading' })
+    try {
+      const res = await fetch('/api/photos/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signedUrl: review.photo.signedUrl, messages: nextMessages }),
+      })
+      const data = await res.json()
+      setReview(r => r && {
+        ...r,
+        status: 'done',
+        messages: [...nextMessages, { role: 'assistant', content: data.response }],
+      })
+    } catch {
+      setReview(r => r && { ...r, status: 'done' })
     }
   }
 
@@ -78,6 +137,78 @@ export function PhotosTab() {
           </button>
           {uploadErr && <p className="text-xs text-red-500">{uploadErr}</p>}
         </div>
+
+        {/* Agent review panel */}
+        {review && review.status !== 'prompt' || (review && review.status === 'prompt') ? (
+          review && (
+            <div className="border border-zinc-200 rounded-xl p-4 space-y-3 bg-zinc-50">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  {review.photo.signedUrl && (
+                    <img src={review.photo.signedUrl} alt={review.photo.name}
+                      className="w-12 h-12 rounded-lg object-cover border border-zinc-200 shrink-0" />
+                  )}
+                  <div>
+                    <p className="text-xs font-medium text-zinc-700">Photo saved</p>
+                    <p className="text-xs text-zinc-400">{review.photo.name}</p>
+                  </div>
+                </div>
+                <button onClick={() => setReview(null)} className="text-xs text-zinc-400 hover:text-zinc-600 shrink-0">Dismiss</button>
+              </div>
+
+              {review.status === 'prompt' && (
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-zinc-600">Have the Agent review this photo?</p>
+                  <button
+                    onClick={startReview}
+                    className="px-3 py-1 text-xs font-medium bg-zinc-900 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                  >
+                    Review
+                  </button>
+                  <button onClick={() => setReview(null)} className="px-3 py-1 text-xs text-zinc-500 hover:text-zinc-700">
+                    Skip
+                  </button>
+                </div>
+              )}
+
+              {review.status === 'loading' && (
+                <p className="text-xs text-zinc-400 italic">Agent is reviewing…</p>
+              )}
+
+              {review.status === 'done' && review.messages.length > 0 && (
+                <div className="space-y-3">
+                  {review.messages.map((m, i) => (
+                    <div key={i} className={`text-xs leading-relaxed ${m.role === 'user' ? 'text-zinc-500 italic' : 'text-zinc-700'}`}>
+                      {m.role === 'assistant' && <span className="text-zinc-400 font-medium uppercase tracking-wide text-[10px] block mb-0.5">Agent</span>}
+                      {m.content}
+                    </div>
+                  ))}
+
+                  {/* Only show reply if last message was from agent and we haven't gone too deep */}
+                  {review.messages[review.messages.length - 1]?.role === 'assistant' && review.messages.length < 4 && (
+                    <div className="flex gap-2 pt-1">
+                      <input
+                        type="text"
+                        value={review.draft}
+                        onChange={e => setReview(r => r && { ...r, draft: e.target.value })}
+                        onKeyDown={e => e.key === 'Enter' && sendReply()}
+                        placeholder="Reply to Agent…"
+                        className="flex-1 text-xs border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-zinc-400 bg-white"
+                      />
+                      <button
+                        onClick={sendReply}
+                        disabled={!review.draft.trim()}
+                        className="px-3 py-1.5 text-xs font-medium bg-zinc-900 text-white rounded-lg hover:bg-zinc-700 disabled:opacity-40 transition-colors"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        ) : null}
 
         {/* Grid */}
         {loading ? (
