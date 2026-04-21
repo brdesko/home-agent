@@ -53,29 +53,37 @@ export function NotebookTabs({ projects, events, goals, quarterlyBudgets, ongoin
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {tab === 'Overview' && (
-          <OverviewTab
+      {tab === 'Calendar' ? (
+        <div className="px-6 py-6">
+          <CalendarTab
+            initialEvents={calendarEvents}
+            timelineEvents={events}
             projects={projects}
-            events={events}
-            goals={goals}
             quarterlyBudgets={quarterlyBudgets}
-            ongoingTasks={ongoingTasks}
           />
-        )}
-        {tab === 'To-Do' && (
-          <TodoTab projects={projects} goals={goals} ongoingTasks={ongoingTasks} isOwner={isOwner} />
-        )}
-        {tab === 'Calendar' && (
-          <CalendarTab initialEvents={calendarEvents} timelineEvents={events} />
-        )}
-        {tab === 'Projects' && (
-          <ProjectManagementTab projects={projects} goals={goals} isOwner={isOwner} />
-        )}
-        {tab === 'Planning' && (
-          <DashboardTab goals={goals} projects={projects} quarters={quarterlyBudgets} isOwner={isOwner} />
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          {tab === 'Overview' && (
+            <OverviewTab
+              projects={projects}
+              events={events}
+              goals={goals}
+              quarterlyBudgets={quarterlyBudgets}
+              ongoingTasks={ongoingTasks}
+            />
+          )}
+          {tab === 'To-Do' && (
+            <TodoTab projects={projects} goals={goals} ongoingTasks={ongoingTasks} isOwner={isOwner} />
+          )}
+          {tab === 'Projects' && (
+            <ProjectManagementTab projects={projects} goals={goals} isOwner={isOwner} />
+          )}
+          {tab === 'Planning' && (
+            <DashboardTab goals={goals} projects={projects} quarters={quarterlyBudgets} isOwner={isOwner} />
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,8 +1,18 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react'
 import { type TimelineEvent } from '../timeline-panel'
+import { type Project } from '../project-card'
+import { type QuarterlyBudget } from '../budget-tab'
+import {
+  QuarterlyScheduler,
+  type EffortLevel,
+  EFFORT_PTS,
+  EFFORT_COLORS,
+  ptsToLevel,
+  getNextFourQuarters,
+} from '../quarterly-scheduler'
 
 const SAGE = 'oklch(0.50 0.10 155)'
 
@@ -53,6 +63,8 @@ function buildGrid(year: number, month: number): Date[] {
 type Props = {
   initialEvents: CalendarEvent[]
   timelineEvents: TimelineEvent[]
+  projects: (Project & { goal_id: string | null })[]
+  quarterlyBudgets: QuarterlyBudget[]
 }
 
 type PanelState =
@@ -60,14 +72,68 @@ type PanelState =
   | { mode: 'new'; date: string }
   | { mode: 'edit'; event: CalendarEvent }
 
-export function CalendarTab({ initialEvents, timelineEvents }: Props) {
+export function CalendarTab({ initialEvents, timelineEvents, projects, quarterlyBudgets }: Props) {
   const now    = new Date()
   const [year,  setYear]  = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [panel, setPanel]   = useState<PanelState>({ mode: 'closed' })
 
-  // Form state
+  // ── Staging state for quarterly scheduler ──────────────────────────────────
+  const [pending, setPending] = useState<Map<string, { year: number; quarter: number } | null>>(new Map())
+
+  const quarters  = useMemo(() => getNextFourQuarters(), [])
+  const validKeys = useMemo(() => new Set(quarters.map(q => q.key)), [quarters])
+
+  // Compute aggregate effort per quarter key, accounting for pending moves
+  const effortByKey = useMemo<Record<string, EffortLevel>>(() => {
+    const pts: Record<string, number> = {}
+    const schedulable = projects.filter(p => p.status !== 'cancelled' && p.status !== 'complete')
+
+    for (const p of schedulable) {
+      let key: string | null
+      if (pending.has(p.id)) {
+        const dest = pending.get(p.id)
+        key = dest ? `${dest.year}-${dest.quarter}` : null
+      } else if (p.target_year && p.target_quarter) {
+        const k = `${p.target_year}-${p.target_quarter}`
+        key = validKeys.has(k) ? k : null
+      } else {
+        key = null
+      }
+      if (key) {
+        pts[key] = (pts[key] ?? 0) + (EFFORT_PTS[p.effort ?? ''] ?? 0)
+      }
+    }
+
+    const result: Record<string, EffortLevel> = {}
+    for (const [k, score] of Object.entries(pts)) result[k] = ptsToLevel(score)
+    return result
+  }, [projects, pending, validKeys])
+
+  function handleMove(projectId: string, dest: { year: number; quarter: number } | null) {
+    setPending(prev => new Map(prev).set(projectId, dest))
+  }
+
+  async function handleSave() {
+    await Promise.all(
+      [...pending.entries()].map(([id, dest]) =>
+        fetch(`/api/projects/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dest
+            ? { target_year: dest.year, target_quarter: dest.quarter }
+            : { target_year: null, target_quarter: null }
+          ),
+        })
+      )
+    )
+    setPending(new Map())
+  }
+
+  function handleDiscard() { setPending(new Map()) }
+
+  // ── Calendar event form ────────────────────────────────────────────────────
   const [fTitle,     setFTitle]     = useState('')
   const [fType,      setFType]      = useState<CalendarEvent['type']>('busy')
   const [fStartDate, setFStartDate] = useState('')
@@ -137,19 +203,16 @@ export function CalendarTab({ initialEvents, timelineEvents }: Props) {
     else setMonth(m => m + 1)
   }
 
-  const grid     = buildGrid(year, month)
-  const todayIso = isoDate(now)
+  const grid      = buildGrid(year, month)
+  const todayIso  = isoDate(now)
   const monthLabel = new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
-  // Index events by date for quick lookup
   function calEventsOnDay(dayIso: string): CalendarEvent[] {
     return events.filter(e => e.start_date <= dayIso && e.end_date >= dayIso)
   }
   function tlEventsOnDay(dayIso: string): TimelineEvent[] {
     return timelineEvents.filter(e => e.event_date === dayIso)
   }
-
-  // Determine band rendering: start / mid / end
   function bandPosition(e: CalendarEvent, dayIso: string): 'start' | 'mid' | 'end' | 'single' {
     const sameDay = e.start_date === e.end_date
     if (sameDay) return 'single'
@@ -161,129 +224,156 @@ export function CalendarTab({ initialEvents, timelineEvents }: Props) {
   const panelOpen = panel.mode !== 'closed'
 
   return (
-    <div className="space-y-0 relative">
+    <div className="flex gap-5 min-h-[520px]">
 
-      {/* Month nav */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <h2 className="text-lg font-display text-zinc-800 w-44 text-center">{monthLabel}</h2>
-          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        <button
-          onClick={() => openNew(todayIso)}
-          className="text-sm font-medium text-white px-3 py-1.5 rounded-lg transition-colors"
-          style={{ backgroundColor: SAGE }}>
-          + Add event
-        </button>
+      {/* ── Left: Quarterly scheduler ── */}
+      <div className="flex-1 min-w-0 flex flex-col" style={{ minWidth: 0, maxWidth: '60%' }}>
+        <QuarterlyScheduler
+          projects={projects}
+          quarterlyBudgets={quarterlyBudgets}
+          pending={pending}
+          effortByKey={effortByKey}
+          onMove={handleMove}
+          onSave={handleSave}
+          onDiscard={handleDiscard}
+        />
       </div>
 
-      {/* Day headers */}
-      <div className="grid grid-cols-7 mb-1">
-        {DAYS.map(d => (
-          <div key={d} className="text-center text-xs font-semibold uppercase tracking-widest text-zinc-400 pb-2">{d}</div>
-        ))}
-      </div>
+      {/* ── Right: Calendar ── */}
+      <div className="w-[380px] shrink-0 flex flex-col">
 
-      {/* Grid */}
-      <div className="grid grid-cols-7 border-l border-t border-zinc-100">
-        {grid.map((day, i) => {
-          const iso      = isoDate(day)
-          const inMonth  = day.getMonth() === month
-          const isToday  = iso === todayIso
-          const calEvts  = calEventsOnDay(iso)
-          const tlEvts   = tlEventsOnDay(iso)
-          const hasEvents = calEvts.length > 0 || tlEvts.length > 0
-
-          return (
-            <div
-              key={i}
-              onClick={() => inMonth && openNew(iso)}
-              className={`min-h-[90px] border-r border-b border-zinc-100 p-1.5 flex flex-col cursor-pointer transition-colors ${
-                inMonth ? 'hover:bg-zinc-50' : 'bg-zinc-50/40'
-              }`}
-            >
-              {/* Day number */}
-              <div className="flex justify-end mb-1">
-                <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full font-medium ${
-                  isToday
-                    ? 'text-white'
-                    : inMonth ? 'text-zinc-600' : 'text-zinc-300'
-                }`} style={isToday ? { backgroundColor: SAGE } : {}}>
-                  {day.getDate()}
-                </span>
-              </div>
-
-              {/* Events */}
-              <div className="flex flex-col gap-0.5 flex-1">
-                {calEvts.slice(0, 3).map(e => {
-                  const meta = TYPE_META[e.type]
-                  const pos  = bandPosition(e, iso)
-                  const isMultiDay = e.start_date !== e.end_date
-                  return (
-                    <div
-                      key={e.id}
-                      onClick={ev => { ev.stopPropagation(); openEdit(e) }}
-                      className="text-[10px] font-medium leading-tight px-1.5 py-0.5 truncate cursor-pointer"
-                      style={{
-                        backgroundColor: meta.band,
-                        color: meta.text,
-                        borderRadius: isMultiDay
-                          ? pos === 'start' ? '4px 0 0 4px'
-                          : pos === 'end'   ? '0 4px 4px 0'
-                          : pos === 'mid'   ? '0'
-                          : '4px'
-                          : '4px',
-                        marginLeft:  (isMultiDay && (pos === 'mid' || pos === 'end'))  ? '-6px' : undefined,
-                        marginRight: (isMultiDay && (pos === 'mid' || pos === 'start')) ? '-6px' : undefined,
-                      }}
-                    >
-                      {(pos === 'start' || pos === 'single') ? e.title : '\u00a0'}
-                    </div>
-                  )
-                })}
-                {tlEvts.slice(0, 2).map(e => (
-                  <div key={e.id}
-                    className="text-[10px] font-medium leading-tight px-1.5 py-0.5 truncate rounded"
-                    style={{ backgroundColor: 'oklch(0.93 0.04 155)', color: SAGE }}>
-                    {e.title}
-                  </div>
-                ))}
-                {(calEvts.length + tlEvts.length) > 3 && (
-                  <p className="text-[10px] text-zinc-400 px-1">+{calEvts.length + tlEvts.length - 3} more</p>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 pt-4 pb-1">
-        {Object.entries(TYPE_META).map(([type, meta]) => (
-          <div key={type} className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: meta.band }} />
-            <span className="text-xs text-zinc-500">{meta.label}</span>
+        {/* Month nav */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <h2 className="text-sm font-display text-zinc-800 w-36 text-center">{monthLabel}</h2>
+            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-        ))}
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'oklch(0.93 0.04 155)' }} />
-          <span className="text-xs text-zinc-500">Project event</span>
+          <button
+            onClick={() => openNew(todayIso)}
+            className="text-xs font-medium text-white px-2.5 py-1.5 rounded-lg transition-colors"
+            style={{ backgroundColor: SAGE }}
+          >
+            + Add
+          </button>
+        </div>
+
+        {/* Day headers */}
+        <div className="grid grid-cols-7 mb-0.5">
+          {DAYS.map(d => (
+            <div key={d} className="text-center text-[9px] font-semibold uppercase tracking-widest text-zinc-400 pb-1.5">{d}</div>
+          ))}
+        </div>
+
+        {/* Grid */}
+        <div className="grid grid-cols-7 border-l border-t border-zinc-100 flex-1">
+          {grid.map((day, i) => {
+            const iso      = isoDate(day)
+            const inMonth  = day.getMonth() === month
+            const isToday  = iso === todayIso
+            const calEvts  = calEventsOnDay(iso)
+            const tlEvts   = tlEventsOnDay(iso)
+
+            // Effort indicator for this day's quarter
+            const dayQ       = Math.ceil((day.getMonth() + 1) / 3)
+            const dayQKey    = `${day.getFullYear()}-${dayQ}`
+            const effortLvl  = effortByKey[dayQKey] ?? 'none'
+            const effortColor = effortLvl !== 'none' ? EFFORT_COLORS[effortLvl] : null
+
+            return (
+              <div
+                key={i}
+                onClick={() => inMonth && openNew(iso)}
+                className={`min-h-[72px] border-r border-b border-zinc-100 p-1 flex flex-col cursor-pointer transition-colors ${
+                  inMonth ? 'hover:bg-zinc-50' : 'bg-zinc-50/40'
+                }`}
+              >
+                {/* Effort strip — thin colored bar at top of cell */}
+                {inMonth && effortColor && (
+                  <div
+                    className="w-full h-[2px] rounded-full mb-1 opacity-70"
+                    style={{ backgroundColor: effortColor }}
+                  />
+                )}
+
+                {/* Day number */}
+                <div className="flex justify-end mb-0.5">
+                  <span className={`text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-medium ${
+                    isToday ? 'text-white' : inMonth ? 'text-zinc-600' : 'text-zinc-300'
+                  }`} style={isToday ? { backgroundColor: SAGE } : {}}>
+                    {day.getDate()}
+                  </span>
+                </div>
+
+                {/* Events */}
+                <div className="flex flex-col gap-0.5 flex-1">
+                  {calEvts.slice(0, 2).map(e => {
+                    const meta = TYPE_META[e.type]
+                    const pos  = bandPosition(e, iso)
+                    const isMultiDay = e.start_date !== e.end_date
+                    return (
+                      <div
+                        key={e.id}
+                        onClick={ev => { ev.stopPropagation(); openEdit(e) }}
+                        className="text-[9px] font-medium leading-tight px-1 py-0.5 truncate cursor-pointer"
+                        style={{
+                          backgroundColor: meta.band,
+                          color: meta.text,
+                          borderRadius: isMultiDay
+                            ? pos === 'start' ? '3px 0 0 3px'
+                            : pos === 'end'   ? '0 3px 3px 0'
+                            : '0' : '3px',
+                          marginLeft:  (isMultiDay && (pos === 'mid' || pos === 'end'))   ? '-4px' : undefined,
+                          marginRight: (isMultiDay && (pos === 'mid' || pos === 'start')) ? '-4px' : undefined,
+                        }}
+                      >
+                        {(pos === 'start' || pos === 'single') ? e.title : '\u00a0'}
+                      </div>
+                    )
+                  })}
+                  {tlEvts.slice(0, 1).map(e => (
+                    <div key={e.id}
+                      className="text-[9px] font-medium leading-tight px-1 py-0.5 truncate rounded"
+                      style={{ backgroundColor: 'oklch(0.93 0.04 155)', color: SAGE }}>
+                      {e.title}
+                    </div>
+                  ))}
+                  {(calEvts.length + tlEvts.length) > 2 && (
+                    <p className="text-[9px] text-zinc-400 px-0.5">+{calEvts.length + tlEvts.length - 2}</p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-3 pt-3">
+          {Object.entries(TYPE_META).map(([type, meta]) => (
+            <div key={type} className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: meta.band }} />
+              <span className="text-[10px] text-zinc-500">{meta.label}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: 'oklch(0.93 0.04 155)' }} />
+            <span className="text-[10px] text-zinc-500">Project event</span>
+          </div>
         </div>
       </div>
 
-      {/* Backdrop */}
+      {/* ── Backdrop ── */}
       <div
         className="fixed inset-0 z-40 bg-black/20 transition-opacity duration-200"
         style={{ opacity: panelOpen ? 1 : 0, pointerEvents: panelOpen ? 'auto' : 'none' }}
         onClick={closePanel}
       />
 
-      {/* Event panel */}
+      {/* ── Event panel (slide-over) ── */}
       <div
         className="fixed inset-y-0 right-0 z-50 w-[400px] bg-white shadow-2xl flex flex-col"
         style={{ transform: panelOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1)' }}
@@ -298,7 +388,6 @@ export function CalendarTab({ initialEvents, timelineEvents }: Props) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          {/* Title */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Title</label>
             <input ref={titleRef} value={fTitle} onChange={e => setFTitle(e.target.value)}
@@ -306,7 +395,6 @@ export function CalendarTab({ initialEvents, timelineEvents }: Props) {
               className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
           </div>
 
-          {/* Type */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Type</label>
             <div className="grid grid-cols-3 gap-2">
@@ -326,7 +414,6 @@ export function CalendarTab({ initialEvents, timelineEvents }: Props) {
             </div>
           </div>
 
-          {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Start</label>
@@ -340,7 +427,6 @@ export function CalendarTab({ initialEvents, timelineEvents }: Props) {
             </div>
           </div>
 
-          {/* Notes */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Notes</label>
             <textarea value={fNotes} onChange={e => setFNotes(e.target.value)}
