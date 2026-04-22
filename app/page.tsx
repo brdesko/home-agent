@@ -31,7 +31,7 @@ export default async function HomePage() {
   if (!user) redirect('/login')
 
   const propertyId = await getPropertyId(supabase, user.id)
-  if (!propertyId) redirect('/login')
+  if (!propertyId) redirect('/new-property')
 
   const { data: propertyData } = await supabase
     .from('property_members')

@@ -2,35 +2,34 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const PROPERTY_ID = 'a1b2c3d4-0000-0000-0000-000000000001'
-
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: member } = await supabase
+  // Verify the caller is an owner of at least one property
+  const { data: memberships } = await supabase
     .from('property_members')
     .select('role')
-    .eq('property_id', PROPERTY_ID)
     .eq('user_id', user.id)
-    .single()
 
-  if (member?.role !== 'owner') {
+  const isOwner = (memberships ?? []).some(m => m.role === 'owner')
+  if (!isOwner) {
     return NextResponse.json({ error: 'Only owners can invite members' }, { status: 403 })
   }
 
-  const { email, role = 'owner' } = await request.json()
+  const { email } = await request.json()
   if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 })
 
   const admin = createAdminClient()
 
+  // Invite creates an account only — no property assignment.
+  // The new user will be prompted to create their own property on first login.
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'invite',
     email,
     options: {
       redirectTo: `${new URL(request.url).origin}/auth/confirm`,
-      data: { property_id: PROPERTY_ID, role },
     },
   })
 

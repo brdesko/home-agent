@@ -38,7 +38,7 @@ export default function ConfirmPage() {
         })
       }
 
-      window.location.href = '/'
+      window.location.href = '/setup-password'
     })
   }, [])
 
