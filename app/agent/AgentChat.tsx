@@ -3,11 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-
-type Message = {
-  role: 'user' | 'assistant'
-  content: string
-}
+import { useAgentContext, type AgentMessage } from '@/components/agent-context'
 
 type ProjectCreated = {
   id: string
@@ -22,23 +18,14 @@ type ChangeResult = {
   summary: string
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours()
-  const time = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
-  return `Good ${time} — what are we working on today?`
-}
-
 export function AgentChat() {
   const router       = useRouter()
   const searchParams = useSearchParams()
+  const { messages, setMessages, messagesRef, loading, setLoading, loadingRef } = useAgentContext()
 
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: getGreeting() },
-  ])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [input, setInput]               = useState('')
   const [projectCreated, setProjectCreated] = useState<ProjectCreated | null>(null)
-  const [changes, setChanges] = useState<ChangeResult[]>([])
+  const [changes, setChanges]           = useState<ChangeResult[]>([])
   const [cascadeLabel, setCascadeLabel] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const sentCtx   = useRef(false)
@@ -56,17 +43,17 @@ export function AgentChat() {
 
     if (taskTitle) setCascadeLabel(`Completed: ${taskTitle}`)
 
-    // Greeter is sent to API for context but not shown; only the response is rendered
-    const greeter: Message = { role: 'assistant', content: getGreeting() }
-    const userMessage: Message = { role: 'user', content: ctx }
-    const apiMessages = [greeter, userMessage]
-    setMessages([{ role: 'assistant', content: 'Looking across your projects…' }])
+    // Append the cascade message to the existing shared conversation
+    const userMessage: AgentMessage = { role: 'user', content: ctx }
+    const next = [...messagesRef.current, userMessage]
+    messagesRef.current = next
+    setMessages(next)
     setLoading(true)
 
     fetch('/api/agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: apiMessages }),
+      body: JSON.stringify({ messages: next }),
     })
       .then(async r => {
         const data = await r.json().catch(() => ({}))
@@ -74,12 +61,20 @@ export function AgentChat() {
         return data
       })
       .then(data => {
-        setMessages([{ role: 'assistant', content: data.response }])
+        setMessages(prev => {
+          const updated = [...prev, { role: 'assistant' as const, content: data.response }]
+          messagesRef.current = updated
+          return updated
+        })
         if (data.projectCreated) setProjectCreated(data.projectCreated)
         if (data.changes?.length) setChanges(prev => [...prev, ...data.changes])
       })
       .catch(() => {
-        setMessages([{ role: 'assistant', content: 'Something went wrong. Please try again.' }])
+        setMessages(prev => {
+          const updated = [...prev, { role: 'assistant' as const, content: 'Something went wrong. Please try again.' }]
+          messagesRef.current = updated
+          return updated
+        })
       })
       .finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,10 +82,11 @@ export function AgentChat() {
 
   async function send() {
     const text = input.trim()
-    if (!text || loading) return
+    if (!text || loadingRef.current) return
 
-    const userMessage: Message = { role: 'user', content: text }
-    const next = [...messages, userMessage]
+    const userMessage: AgentMessage = { role: 'user', content: text }
+    const next = [...messagesRef.current, userMessage]
+    messagesRef.current = next
     setMessages(next)
     setInput('')
     setLoading(true)
@@ -105,11 +101,19 @@ export function AgentChat() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Server error')
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
+      setMessages(prev => {
+        const updated = [...prev, { role: 'assistant' as const, content: data.response }]
+        messagesRef.current = updated
+        return updated
+      })
       if (data.projectCreated) setProjectCreated(data.projectCreated)
       if (data.changes?.length) setChanges(prev => [...prev, ...data.changes])
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+      setMessages(prev => {
+        const updated = [...prev, { role: 'assistant' as const, content: 'Something went wrong. Please try again.' }]
+        messagesRef.current = updated
+        return updated
+      })
     } finally {
       setLoading(false)
     }

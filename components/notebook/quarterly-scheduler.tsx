@@ -109,13 +109,12 @@ function DraggableCard({ project }: { project: SchedulerProject }) {
       {...attributes}
       {...listeners}
       style={{
-        transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
         borderLeftColor: domainColor,
         backgroundColor: effortBg,
-        opacity: isDragging ? 0.35 : 1,
+        // When dragging, hide the original — DragOverlay is the sole visual
+        opacity: isDragging ? 0 : 1,
         cursor: isDragging ? 'grabbing' : 'grab',
         position: 'relative',
-        zIndex: isDragging ? 1 : 'auto' as never,
       }}
       className="border border-zinc-200 border-l-[3px] rounded-lg px-2.5 py-2 select-none touch-none"
     >

@@ -33,24 +33,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let activeProjectCount = 0
 
   if (user) {
-    const { data: memberships } = await supabase
+    // Two separate queries avoids nested-join RLS evaluation issues
+    const { data: membershipRows } = await supabase
       .from('property_members')
-      .select('properties(id, name)')
+      .select('property_id')
       .eq('user_id', user.id)
       .order('created_at')
 
-    const allIncluding = (memberships ?? [])
-      .map(m => m.properties as unknown as PropertyEntry | null)
-      .filter((p): p is PropertyEntry => !!p)
+    const memberPropertyIds = (membershipRows ?? [])
+      .map(m => m.property_id as string)
+      .filter(Boolean)
 
-    if (allIncluding.length > 0) {
-      const { data: archivedRows } = await supabase
-        .from('properties')
-        .select('id')
-        .in('id', allIncluding.map(p => p.id))
-        .eq('is_archived', true)
+    if (memberPropertyIds.length > 0) {
+      const [{ data: propertiesData }, { data: archivedRows }] = await Promise.all([
+        supabase.from('properties').select('id, name').in('id', memberPropertyIds),
+        supabase.from('properties').select('id').in('id', memberPropertyIds).eq('is_archived', true),
+      ])
       const archivedIds = new Set((archivedRows ?? []).map(r => r.id))
-      allProperties = allIncluding.filter(p => !archivedIds.has(p.id))
+      allProperties = ((propertiesData ?? []) as PropertyEntry[]).filter(p => !archivedIds.has(p.id))
     }
 
     currentPropertyId = await getPropertyId(supabase, user.id)

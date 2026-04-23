@@ -2,33 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { MessageSquare, X, Send, Minimize2 } from 'lucide-react'
+import { useAgentContext } from './agent-context'
 
-const SAGE     = 'oklch(0.50 0.10 155)'
-const SAGE_HEX = '#4a7c6a'
-
-type Message = { role: 'user' | 'assistant'; content: string }
-
-function getGreeting(): string {
-  const h = new Date().getHours()
-  const t = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
-  return `Good ${t}. Ask me anything about your property.`
-}
+const SAGE = 'oklch(0.50 0.10 155)'
 
 export function FloatingChat() {
-  const [open, setOpen]         = useState(false)
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: getGreeting() },
-  ])
-  const [draft, setDraft]     = useState('')
-  const [loading, setLoading] = useState(false)
-  const bottomRef             = useRef<HTMLDivElement>(null)
-  const inputRef              = useRef<HTMLInputElement>(null)
-  const messagesRef           = useRef<Message[]>(messages)
-  const loadingRef            = useRef(false)
-
-  // Keep refs in sync
-  useEffect(() => { messagesRef.current = messages }, [messages])
-  useEffect(() => { loadingRef.current = loading }, [loading])
+  const { messages, setMessages, messagesRef, loading, setLoading, loadingRef } = useAgentContext()
+  const [open, setOpen]   = useState(false)
+  const [draft, setDraft] = useState('')
+  const bottomRef         = useRef<HTMLDivElement>(null)
+  const inputRef          = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -116,7 +99,7 @@ export function FloatingChat() {
             {messages.map((m, i) => (
               <div key={i} className={m.role === 'user' ? 'flex justify-end' : ''}>
                 <div
-                  className="text-sm leading-relaxed max-w-[85%]"
+                  className="text-sm leading-relaxed max-w-[85%] whitespace-pre-wrap"
                   style={m.role === 'user'
                     ? { backgroundColor: 'oklch(0.93 0.02 75)', color: 'oklch(0.40 0.015 75)', padding: '8px 12px', borderRadius: '16px 16px 4px 16px' }
                     : { color: 'oklch(0.42 0.015 75)' }

@@ -22,8 +22,18 @@ const ZONE_DESCRIPTIONS: Record<ZoneId, string> = {
   drive:    'Curved gravel driveway, parking, and entry from Durham Rd.',
 }
 
-export function PropertyVisual() {
+// Addresses for which a hardcoded 3D layout exists.
+const CONFIGURED_ADDRESSES = ['5090 durham', 'pipersville']
+
+function hasConfiguredLayout(address: string | null | undefined): boolean {
+  if (!address) return false
+  const lower = address.toLowerCase()
+  return CONFIGURED_ADDRESSES.some(a => lower.includes(a))
+}
+
+export function PropertyVisual({ propertyAddress }: { propertyAddress?: string | null }) {
   const [activeZone, setActiveZone] = useState<ZoneId | null>(null)
+  const isConfigured = hasConfiguredLayout(propertyAddress)
 
   function toggleZone(id: ZoneId) {
     setActiveZone(prev => prev === id ? null : id)
@@ -36,7 +46,7 @@ export function PropertyVisual() {
 
       {/* ── 3D canvas ── */}
       <div className="flex-1 rounded-xl overflow-hidden" style={{ border: '1px solid #1e293b' }}>
-        <PropertyScene activeZone={activeZone} onZoneClick={toggleZone} />
+        <PropertyScene activeZone={activeZone} onZoneClick={toggleZone} isConfigured={isConfigured} />
       </div>
 
       {/* ── Zone panel ── */}

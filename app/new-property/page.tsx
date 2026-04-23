@@ -25,6 +25,12 @@ export default function NewPropertyPage() {
     setLoading(false)
 
     if (!res.ok) { setError(data.error ?? 'Something went wrong'); return }
+    // Set the cookie so getPropertyId finds the new property immediately
+    await fetch('/api/property/switch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ property_id: data.id }),
+    })
     router.push('/')
   }
 

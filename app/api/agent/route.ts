@@ -71,7 +71,8 @@ function buildSystemPrompt(
   property: PropertyInfo,
   projects: { id: string; name: string; domain: string; status: string; priority: string; goal_id: string | null }[],
   goals: { id: string; name: string; status: string; target_budget: number | null; sort_order: number }[],
-  references: ReferenceRow[]
+  references: ReferenceRow[],
+  context: { today: string; currentYear: number; currentQuarter: number }
 ) {
   const isEmpty = projects.length === 0 && goals.length === 0
   const sortedGoals = [...goals].sort((a, b) => a.sort_order - b.sort_order)
@@ -108,6 +109,8 @@ function buildSystemPrompt(
     ? `${property.name} (${property.address})`
     : property.name
 
+  const dateContext = `Today is ${context.today}. The current quarter is Q${context.currentQuarter} ${context.currentYear}. When scheduling new projects, never suggest a target_year or target_quarter in the past — all new project scheduling must be Q${context.currentQuarter} ${context.currentYear} or later.`
+
   const onboardingSection = isEmpty ? `
 This is a brand new property notebook — no projects or goals exist yet. Your first job is to help the owner set it up. Be warm and practical.
 
@@ -129,6 +132,7 @@ When the owner describes goals or projects verbally instead:
 ` : ''
 
   return `You are the Property Agent for ${propertyLine}.
+${dateContext}
 ${onboardingSection}
 Current goals:
 ${goalList}
@@ -186,7 +190,9 @@ When a contractor, service provider, brand, or resource comes up positively in c
 
 Be direct, warm, and honest. Use good judgment — don't ask unnecessary questions. Never commit anything without a clear green light.
 
-Write in plain prose. No markdown — no asterisks, no dashes for bullet lists, no pound-sign headers. Use short paragraphs and line breaks for structure.`
+Write in plain prose. No markdown — no asterisks, no dashes for bullet lists, no pound-sign headers. Use short paragraphs and line breaks for structure.
+
+Keep responses concise. Most replies should be 3–5 sentences. When proposing a project or set of changes, lead with the recommendation, give one key reason, state what you would create, then stop — save elaboration for follow-up questions. If you need to list items, number them on separate lines and keep each to one line. Never pad with summaries, caveats, or sign-offs.`
 }
 
 type TaskInput = {
@@ -682,7 +688,12 @@ export async function POST(req: NextRequest) {
   const goals      = goalData    ?? []
   const references = refData     ?? []
   const property: PropertyInfo = { name: propData?.name ?? 'this property', address: propData?.address ?? null }
-  const systemPrompt = buildSystemPrompt(property, projects, goals, references)
+  const now = new Date()
+  const systemPrompt = buildSystemPrompt(property, projects, goals, references, {
+    today: now.toISOString().split('T')[0],
+    currentYear: now.getFullYear(),
+    currentQuarter: Math.ceil((now.getMonth() + 1) / 3),
+  })
 
   let projectCreated: ProjectCreated | null = null
   const changes: ChangeResult[] = []

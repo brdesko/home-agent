@@ -164,15 +164,49 @@ function Compass() {
   )
 }
 
+// ─── Unconfigured placeholder ─────────────────────────────────────────────────
+
+function UnconfiguredScene() {
+  return (
+    <Canvas camera={{ position: [0, 60, 40], fov: 36 }} style={{ background: '#0e1520' }}>
+      <ambientLight intensity={0.4} />
+      <PropertyGrid />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+        <planeGeometry args={[240, 240]} />
+        <meshStandardMaterial color="#0c1824" roughness={1} />
+      </mesh>
+      <Html position={[0, 2, 0]} center>
+        <div style={{
+          textAlign: 'center',
+          pointerEvents: 'none',
+          fontFamily: 'system-ui, sans-serif',
+        }}>
+          <p style={{ color: 'rgba(255,255,255,0.50)', fontSize: '13px', fontWeight: 600, letterSpacing: '0.05em' }}>
+            Property map not yet configured
+          </p>
+          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', marginTop: '6px' }}>
+            Use the Agent to add zones and buildings
+          </p>
+        </div>
+      </Html>
+      <OrbitControls enableDamping dampingFactor={0.07} minDistance={18} maxDistance={180} maxPolarAngle={Math.PI / 2.05} target={[0, 0, 0]} />
+    </Canvas>
+  )
+}
+
 // ─── Scene ────────────────────────────────────────────────────────────────────
 
 export default function PropertyScene({
   activeZone,
   onZoneClick,
+  isConfigured,
 }: {
   activeZone: ZoneId | null
   onZoneClick: (id: ZoneId) => void
+  isConfigured: boolean
 }) {
+  if (!isConfigured) return <UnconfiguredScene />
+
   return (
     <Canvas
       camera={{ position: [8, 95, 58], fov: 36 }}

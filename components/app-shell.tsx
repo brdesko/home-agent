@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BookOpen, MessageSquare, Home, Bookmark, ShoppingBag, ChevronDown, Archive, Trash2 } from 'lucide-react'
 import SignOutButton from './sign-out-button'
 import { FloatingChat } from './floating-chat'
+import { AgentProvider } from './agent-context'
 
 const SIDEBAR_BG = 'oklch(0.16 0.012 80)'
 const SAGE       = 'oklch(0.50 0.10 155)'
@@ -129,13 +130,13 @@ export function AppShell({ user, propertyName, propertyId, allProperties, active
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-hidden flex flex-col bg-background">
-        {children}
-      </main>
-
-      {/* Persistent floating chat — mounted here so it survives page navigation */}
-      <FloatingChat />
+      {/* Main content + floating chat share the same agent conversation */}
+      <AgentProvider>
+        <main className="flex-1 overflow-hidden flex flex-col bg-background">
+          {children}
+        </main>
+        <FloatingChat />
+      </AgentProvider>
     </div>
   )
 }
