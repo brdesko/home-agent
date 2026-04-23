@@ -28,16 +28,6 @@ export default function ConfirmPage() {
         return
       }
 
-      // Seed property_members if the invite included property metadata
-      const meta = data.user.user_metadata as { property_id?: string; role?: string }
-      if (meta?.property_id) {
-        await fetch('/api/auth/join', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ property_id: meta.property_id, role: meta.role ?? 'owner' }),
-        })
-      }
-
       window.location.href = '/setup-password'
     })
   }, [])
