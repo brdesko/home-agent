@@ -374,7 +374,7 @@ export async function runTool(
       }
 
       const parseMsg = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 4096,
         messages: [{ role: 'user', content: `Property listing content:\n\n${contentText}\n\n${LISTING_PARSE_PROMPT}` }],
       })
