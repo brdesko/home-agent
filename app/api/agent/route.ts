@@ -5,11 +5,13 @@ import { getPropertyId } from '@/lib/get-property-id'
 import { tools } from '@/lib/agent/tools'
 import { buildSystemPrompt } from '@/lib/agent/system-prompt'
 import { runTool } from '@/lib/agent/handlers'
+import { logger } from '@/lib/logger'
 import type { ProjectCreated, ChangeResult } from '@/lib/agent/types'
 
 const anthropic = new Anthropic()
 
 export async function POST(req: NextRequest) {
+  const startMs = Date.now()
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -17,6 +19,8 @@ export async function POST(req: NextRequest) {
 
     const PROPERTY_ID = await getPropertyId(supabase, user.id)
     if (!PROPERTY_ID) return NextResponse.json({ error: 'No property found' }, { status: 404 })
+
+    logger.info('agent:request', { userId: user.id, propertyId: PROPERTY_ID })
 
     const { messages } = await req.json()
 
@@ -60,10 +64,14 @@ export async function POST(req: NextRequest) {
           .filter((b): b is Anthropic.TextBlock => b.type === 'text')
           .map(b => b.text)
           .join('')
+        logger.info('agent:complete', { userId: user.id, propertyId: PROPERTY_ID, iterations: i + 1, durationMs: Date.now() - startMs })
         return NextResponse.json({ response: text, projectCreated, changes })
       }
 
-      if (response.stop_reason !== 'tool_use') break
+      if (response.stop_reason !== 'tool_use') {
+        logger.warn('agent:unexpected-stop', { stopReason: response.stop_reason, iteration: i, userId: user.id })
+        break
+      }
 
       const toolResults: Anthropic.ToolResultBlockParam[] = []
 
@@ -76,6 +84,7 @@ export async function POST(req: NextRequest) {
           changes,
           onProjectCreated: (p) => { projectCreated = p },
         })
+        logger.info('agent:tool', { tool: block.name, iteration: i, error: result.is_error ?? false })
         toolResults.push(result)
       }
 
@@ -86,9 +95,10 @@ export async function POST(req: NextRequest) {
       ]
     }
 
+    logger.warn('agent:loop-exhausted', { userId: user.id, propertyId: PROPERTY_ID, durationMs: Date.now() - startMs })
     return NextResponse.json({ response: 'Something went wrong. Please try again.', projectCreated: null, changes: [] })
   } catch (err) {
-    console.error('[agent] unhandled error:', err)
+    logger.error('agent:unhandled-error', { error: err instanceof Error ? err.message : String(err), durationMs: Date.now() - startMs })
     return NextResponse.json({ error: 'Internal server error', response: 'Something went wrong on our end. Please try again.' }, { status: 500 })
   }
 }
