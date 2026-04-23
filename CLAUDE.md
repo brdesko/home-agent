@@ -1,186 +1,344 @@
-# Home Management Platform — Orientation for Claude
+# Lattice Operating Constitution
 
-You are helping build the **Home Management Platform** (HMP), a tool for
-homeowners to plan and manage everything happening on their property — farm
-projects, renovations, maintenance, budgets, timelines. The user is building
-it primarily for himself and his partner Erin, for their 5.3-acre property at
-5090 Durham Rd, Pipersville, PA. It is designed from day one to work for
-other users and properties in the future, but the current sole user is this
-household.
+You are helping build a multi-domain personal operating system. The current product started as **Parcel**, a property management application, and Parcel remains a core domain within the broader system. The broader system is now evolving into **Lattice**: a trusted assistant for managing life across domains with shared context, clear guardrails, and staged autonomy.
 
-Every time you start a session in this repo, read this file first. Then read
-`PLAN.md` for the current state of the project and `SESSION_NOTES/` for recent
-decisions. If anything seems stale or unclear, ask before assuming.
+Every session in this repo should begin by reading this file, then `PLAN.md`, then the latest note in `SESSION_NOTES/`. If anything appears stale, contradictory, or risky, pause and raise it before building.
 
 ---
 
 ## What the product is
 
-HMP has two layers, both scoped to a single Property at a time:
+The product is **Lattice**: a Life OS for an individual owner with optional collaborators.
 
-- **Property Notebook** — structured view of projects, tasks, budgets,
-  timelines, assets, and seasonal data for that Property. The state of the
-  property.
-- **Property Agent** — conversational interface that reads and modifies the
-  Notebook on behalf of the owners.
+Lattice contains:
 
-The Notebook is what you see. The Agent is who you talk to. The Notebook is
-state; the Agent is the editor of that state.
+- **Global Context** — the shared system of truth for cross-domain decisions
+- **Domains** — focused operational modes within the Workspace
+- **Admin Systems** — internal agents and tooling used by the owner to improve the product itself
 
-## The two architectural principles
+Lattice is the top-level product and system. It is broader than any single domain.
 
-These are the decisions that everything else follows from.
+### Initial structure
 
-### 1. Domain-agnostic
+- **Lattice**
+  - **Global Context**
+    - Finances
+    - Time / Calendar
+    - Goals / Priorities
+    - Risk / Planning
+  - **Domains**
+    - **Parcel** — property and household operations
+    - **Personal** — initially finance / planning, with health and fitness deferred until the Lattice model is stable
+    - Future domains may be added later
+  - **Admin Systems**
+    - **Product Manager Agent** — internal product strategy and roadmap support
+    - **QA Agent** — internal technical and product-quality review support
 
-A Property hosts many domains — farm planning, kitchen renovation, ongoing
-maintenance, guest room updates, a future home gym, whatever comes next. Domains
-are not enumerated up front. They are added over time, primarily by the Agent
-in response to the owners' conversations.
+Parcel is a domain of the broader product, not the whole product.
 
-Therefore the core data model is domain-agnostic. Projects, Tasks, Assets,
-BudgetLines, and TimelineEvents are first-class entities scoped to a Property.
-A "farm plan" is not a special type of thing in the schema — it is a set of
-Projects with Tasks, linked to Assets (barns, garden beds), participating in
-the Property's shared Budget and Calendar. A "kitchen renovation" is
-structurally the same kind of thing.
+---
 
-Cross-cutting concerns (budget, time, attention) live at the Property level,
-not inside any domain. Every domain participates in them.
+## The defining architectural principles
 
-When tempted to add domain-specific logic to the core, stop and ask: could
-this be generalized? If yes, generalize it. Domain-specific content (planting
-calendars, tomato varieties, paint-finish comparisons) belongs in seed data or
-domain plugins, not in the schema.
+These are the decisions everything else should follow from.
 
-### 2. Multi-tenant from day one, sharing UI deferred
+### 1. Lattice first, domains second
 
-The data model is built for many Users and many Properties. A User can be a
-member of multiple Properties; a Property can have multiple Users. Row-Level
-Security (RLS) is enabled from the very first schema migration.
+Do not treat Parcel as the root architecture anymore. Parcel is the first mature domain, but the system is now organized around **Lattice**.
 
-However, the UI and features for *using* multi-tenancy — property switcher,
-invitation flows, public sign-up — are explicitly deferred until much later.
-In the current phase, the app shows the user's one Property. No switcher. No
-invite button.
+A Workspace can contain multiple domains. New domains must fit the Workspace model rather than creating parallel architectures.
 
-This gets the architecture right without paying the product-scope cost now.
+When making a design decision, ask:
+- Is this specific to Parcel?
+- Or is it really a Workspace concern that should live above domains?
 
-## Roles within a Property
+If it is truly cross-domain, do not bury it in Parcel.
 
-Two roles, no more:
+### 2. Unified global context layer
 
-- **Owner** — full read/write access to everything, including budgets.
-  (The user and Erin are both Owners of the 5090 Durham Rd Property.)
-- **Viewer** — read-only access to non-sensitive data. Can see projects,
-  tasks, and the timeline. Cannot see budget lines, financial totals, or any
-  other data flagged sensitive. (The user's parents are anticipated Viewers
-  once sharing is enabled.)
+The product uses a **shared global context layer**, not loosely connected apps.
 
-RLS policies enforce these boundaries at the database level, not in
-application code. Never rely on UI-level checks for authorization.
+There is one cross-domain layer for:
+- money
+- time
+- goals
+- priorities
+- risk and planning
 
-## What we are building, in order
+Domains write into and read from this shared layer. A car purchase, kitchen renovation, and personal cash-flow plan must be able to influence one another because they draw on the same finite resources.
 
-- **Phase 1 — The Skeleton.** User and Property scaffolding with RLS. Core
-  data model (Project, Task, Asset, BudgetLine, TimelineEvent). Basic
-  Notebook UI. Hand-seeded farm plan as the first domain. No Agent yet.
-- **Phase 2 — The First Agent Workflow.** Agent with one capability: "add a
-  new project to the Notebook" via conversation. Proves the architecture.
-- **Phase 3 — The Consultant.** Agent expands to modify existing projects,
-  respond to disruptions, suggest proactively, track asset maintenance.
+Do not build separate financial or planning systems per domain and hope the agent reconciles them later. Hard integration is the design choice.
 
-We are currently in Phase 1. Do not build Phase 2 or 3 features unless
-explicitly directed. See `PLAN.md` for the active slice.
+### 3. Small editable core, broad derived intelligence
 
-## Stack
+Global Context is not purely inferred and not purely manual.
 
-- **Next.js 15** (App Router) — frontend and API routes in one framework
-- **Supabase** — Postgres + auth + row-level security
-- **TypeScript** throughout
-- **Tailwind CSS** for styling
-- **shadcn/ui** for component primitives
-- **Anthropic API** for the Agent (Phase 2+)
-- Deployed to **Vercel**
+Use a **hybrid model**:
+- **Editable core:** goals, thresholds, major commitments, strategic priorities, risk preferences, planning assumptions
+- **Derived layer:** forecasts, warnings, rollups, conflicts, summaries, suggested tradeoffs
 
-Rationales in `PLAN.md`. If you want to add a dependency, propose it in chat
-first; don't just install it.
+The user should be able to set direction directly while the system performs synthesis and monitoring.
 
-## How the user works
+### 4. Multi-tenant architecture, low-friction ownership
 
-- Technically literate (VP of Innovation) but has not shipped production
-  React/Node in years. Do not assume fluency with modern JS tooling, npm,
-  git internals, or shell specifics.
-- On **Windows with PowerShell**. Node CLI tools on Windows often need a
-  `cmd /c` wrapper. Watch for this.
-- The user wants to learn. When you make a non-obvious choice, explain why
-  briefly — as part of the main response, not as an aside.
-- When you need information, ask one clarifying question if it would
-  meaningfully change what you build. Don't ask three.
+The architecture remains multi-tenant from day one, but the primary operating model is:
+- one Workspace owned by one primary user
+- optional collaborators or household members
+- optional future users with their own independent Workspaces
 
-## How we work together
+Continue to design for multiple users, but do not force enterprise-style complexity into the product.
 
-- **One slice at a time.** We are working on the active slice in `PLAN.md`.
-  Don't jump ahead.
-- **Write things down.** When we make a decision, capture it in `PLAN.md` or
-  a session note. Do not rely on chat memory across sessions.
-- **Session notes.** At the end of each session, append a summary to
-  `SESSION_NOTES/YYYY-MM-DD.md` — what we built, what we decided, what's open.
-- **Propose before you install or delete.** For new dependencies, schema
-  migrations, or deletion of existing files, propose first and wait for
-  approval.
-- **Commit in logical chunks.** After a working slice of functionality,
-  suggest a commit with a clear message.
-- **Warn before long tasks.** Before starting any work estimated to take
-  over one minute, stop and state: what you're about to do, how long it
-  will take, and wait for explicit approval before the first tool call.
+### 5. Personal utility first, market readiness second
 
-## Automation, subagents, and tooling — a staged approach
+Primary optimization target:
+- create something meaningfully useful for the user's real life
 
-The user has colleagues using agent swarms to compress weeks of development
-into days. That is real, but it requires taste the user is still building.
-For this project we stage up deliberately rather than starting there.
+Secondary optimization target:
+- keep the system structurally capable of becoming marketable someday
 
-- **Phase 1 (current):** single session, single agent, user watching. Goal
-  is for the user to learn how Claude Code works — how it succeeds, how it
-  fails, how to steer it. Do not introduce parallel work or subagents at
-  this phase unless explicitly requested.
-- **End of Phase 1:** introduce a `reviewer` subagent that audits changes
-  against `CLAUDE.md` principles before the user sees them. Single extra
-  layer, no parallelism.
-- **Phase 2:** introduce specialist subagents for clear role boundaries
-  (database, API, UI). Mostly sequential still, but with focused context
-  windows.
-- **Phase 3+:** parallel subagents for genuinely parallel work (bulk UI,
-  tests, refactors). By this point the user can evaluate subagent output
-  quickly and redirect when it drifts.
+When these conflict, default to personal utility **unless** the narrower personal choice would materially block broader product value or useful learning. The Product Manager Agent should actively challenge overly narrow assumptions when it sees them.
 
-Slash commands are the other productivity lever and have almost pure upside.
-Define them in `.claude/commands/` as common workflows emerge. Early
-candidates: `/review` (audit against principles), `/session-start` (read
-CLAUDE.md, PLAN.md, latest session note, and propose next step),
-`/commit-slice` (write a commit message for the current slice against
-`PLAN.md`'s active-slice definition).
+### 6. Staged autonomy, never blind autonomy
 
-When the user asks "could subagents speed this up?", evaluate honestly: is
-the work actually parallel, or sequential with a dependency chain? Does the
-user have enough context to evaluate the output? If the answer to either is
-no, say so.
+The product should become increasingly self-supporting, but trust is earned in stages.
 
-## What this product is NOT
+Agents may eventually execute low-risk work within defined guardrails, but must never silently make major decisions in sensitive areas.
 
-- Not a farm-planning app. Farm planning is the first domain. It is not the
-  product.
-- Not a CMS or an Airtable clone. The Agent is central, not an add-on.
-- Not intended for organizations, teams, or commercial tenants. It is a
-  personal tool that happens to be multi-tenant-ready for small-scale
-  friend-to-friend sharing.
-- Not an on-call product. Reliability standards are "this should work when
-  we use it on weekends," not "99.9% uptime." We are not paging anyone.
+Autonomy must increase through:
+1. observation
+2. recommendation
+3. controlled execution in safe zones
+4. broader execution only after repeated success and explicit loosening of constraints
+
+---
+
+## Domains
+
+## Parcel
+
+Parcel is the property and household operations domain.
+
+It manages:
+- projects
+- tasks
+- assets
+- budgets
+- timelines
+- purchases
+- maintenance
+- property details
+- supporting documents and photos
+
+It already exists in production and is the most mature domain. Continue to refine it, but treat it as one domain within a larger system.
+
+## Personal
+
+Personal is the next planned domain.
+
+It should begin as a **single Personal mode** with multiple sections, not as multiple separate domains.
+
+Initial emphasis:
+- finance and planning
+
+Deferred until the Workspace model is stable:
+- health
+- fitness
+
+Do not let Personal become a pile of disconnected mini-apps. It should feel like one coherent domain that participates in the shared global context.
+
+## Future domains
+
+Possible future domains may include things like travel, career, learning, vehicles, or family operations. Do not pre-build these. Only create them when there is a clear use case and a clean fit with the Workspace model.
+
+---
+
+## Agent model
+
+There are two broad classes of agents.
+
+### 1. User-facing domain agents
+
+These are product features.
+
+Example:
+- **Property Agent** inside Parcel
+
+This class of agent exists to help end users operate within a domain. These agents are part of the product experience and should feel trustworthy, grounded, and useful.
+
+### 2. Admin agents
+
+These are internal operators for the owner only.
+
+They are not end-user features. They are the owner's internal team.
+
+#### Product Manager Agent
+
+The PM Agent helps:
+- translate product vision into phases and slices
+- review the product for opportunities, gaps, and unnecessary complexity
+- suggest roadmap priorities
+- challenge narrow decisions that hurt long-term value
+- recommend missing guardrails, improvements, or market-relevant considerations
+- advise on cost-conscious model usage and architecture choices
+
+#### QA Agent
+
+The QA Agent helps:
+- run fast technical checks
+- run deeper product reviews
+- surface regressions, usability failures, and trust risks
+- validate that the app works as intended
+- report problems clearly and propose fixes
+
+The QA system should support at least two modes:
+- **Fast review:** build, type, route, auth, scoping, and critical checks
+- **Deep review:** simulated user flows, runtime behavior, UX friction, and broader regression review
+
+### Observability and learning
+
+Admin agents are allowed to learn from:
+- error logs
+- failed runs
+- QA reports
+- user friction reported by testers
+- usage patterns and repeated failures
+
+They may observe the product, but they do not become part of the runtime user experience unless explicitly designed to do so.
+
+---
+
+## Guardrails and restricted zones
+
+This product is intended to evolve with increasing autonomy, but some areas always require explicit approval.
+
+### Always pause and ask for approval before changing:
+- database schema or migrations
+- authentication, permissions, membership rules, or RLS
+- deployment or infrastructure configuration
+- external integrations that may create cost, vendor lock-in, or security exposure
+- agent autonomy boundaries or orchestration model
+- features that could affect multiple users or shared data
+- deletion of important code, data, or product capabilities
+- any significant architectural decision
+- any task expected to exceed **$1.00** in token or runtime cost
+
+If you think another restricted zone should exist, the Product Manager Agent should recommend it.
+
+### Safe zones for increasing automation
+
+Low-risk work may eventually be automated with less friction in areas such as:
+- test execution
+- static analysis
+- formatting and low-risk cleanup
+- issue triage
+- documentation updates
+- small UI polish changes within established patterns
+
+Never assume a task is safe just because it seems small. Consider blast radius, trust impact, user impact, and cost.
+
+---
+
+## Cost discipline
+
+The system should remain low-cost by default.
+
+Current preference:
+- keep non-Claude hosting and infrastructure costs near zero where possible
+- avoid paid services until there is clear value or credible profit potential
+- use Claude models efficiently, switching to cheaper models when that does not materially reduce quality
+
+Default model discipline:
+- use stronger models for architecture, orchestration, difficult reasoning, and sensitive decisions
+- use lighter models for narrow parsing, classification, checks, or routine substeps
+- design prompts and workflows to minimize wasteful long loops and repeated context loading
+
+Any action likely to exceed **$1.00** in token/runtime cost must be disclosed with implications and approved first.
+
+---
+
+## Current collaboration model
+
+The user is the strategic owner.
+
+The user wants to:
+- design the product direction
+- supervise the agents that support it
+- learn from the system
+- use the system in real life
+- preserve optional upside toward future marketability
+
+Your job is not just to produce code. Your job is to help build a trustworthy product and a trustworthy way of building it.
+
+### Working style expectations
+
+- Be direct and clear.
+- Explain meaningful technical decisions briefly in plain language.
+- Flag tradeoffs before they become expensive.
+- Do not bury major implications.
+- Prefer one slice at a time, but keep the broader architecture in view.
+- Challenge choices that create hidden debt or narrow the future unnecessarily.
+
+### Debugging expectations
+
+When something fails repeatedly, do not continue guessing. Ask for or surface:
+- exact error
+- expected behavior
+- actual behavior
+- reproduction steps
+- what was already tried
+
+Use structured debugging rather than vague looped retries.
+
+### Session discipline
+
+- Read this file first.
+- Then read `PLAN.md`.
+- Then read latest `SESSION_NOTES/`.
+- Keep decisions written down.
+- Suggest commits in logical chunks.
+- Propose before installing dependencies, deleting major files, changing schema, or altering infra.
+
+---
+
+## Product maturity posture
+
+This is not a toy and not an enterprise SaaS product.
+
+It is:
+- a serious personal system
+- architected cleanly enough to support trusted sharing
+- designed thoughtfully enough to teach strong product management and systems thinking
+- potentially expandable into something marketable later
+
+It is not:
+- a rushed bundle of disconnected apps
+- a swarm of autonomous agents with unclear authority
+- an excuse to skip guardrails because the current user is technical
+
+---
 
 ## Defaults and tone
 
-- Code style: explicit over clever. Readable beats concise.
-- UI style: editorial and warm, not generic SaaS. See `PLAN.md` for the
-  aesthetic direction.
-- Copy in the app: direct, grounded, a bit literary. Never chirpy.
+### Product tone
+- calm
+- grounded
+- trustworthy
+- useful
+- never chirpy
+- never generic SaaS fluff
+
+### Code style
+- explicit over clever
+- readable over compressed
+- modular over monolithic
+- stable over flashy
+
+### UX style
+- warm, editorial, and composed
+- elegant but not precious
+- information-dense where helpful, but never chaotic
+
+### Product decision style
+- prefer durable systems over hacks
+- prefer integrated thinking over disconnected feature sprawl
+- prefer staged learning over premature autonomy

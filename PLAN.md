@@ -1,236 +1,371 @@
-# Home Management Platform — Plan
+# Lattice Product Plan
 
-Living document. Updated as we learn. Last touched: 2026-04-21.
+Living document. Updated for the transition from Parcel-as-product to Lattice-as-product. Last touched: 2026-04-22.
 
 ---
 
 ## What we're building
 
-The **Home Management Platform (HMP)** is a tool for homeowners to plan and
-manage everything happening on a property — farm projects, renovations,
-maintenance, budgets, timelines. Each property in the system has two layers:
+We are building **Lattice**: a trusted, multi-domain personal operating system that helps a user stay organized, realistic, balanced, and proactive across life domains.
 
-- **Property Notebook** — structured view of projects, tasks, budgets,
-  timelines, assets.
-- **Property Agent** — conversational interface that reads and modifies the
-  Notebook.
+The system began as **Parcel**, a property management app. Parcel remains a core domain, but the broader product now expands above it.
 
-The product's defining bet: the *integration across domains* is more valuable
-than any single domain view. A farm plan that can't see the kitchen budget is
-worse than no farm plan at all.
+Lattice contains:
+- **Global Context** — shared finances, time, goals, and planning/risk context
+- **Domains** — operational modes like Parcel and Personal
+- **Admin systems** — internal PM and QA agents used by the owner to improve the product itself
 
-Initial deployment is a single household (user + Erin at 5090 Durham Rd), but
-the architecture is multi-tenant from day one. See `CLAUDE.md` for the two
-governing architectural principles.
+The defining bet is no longer just integration within property management. It is **integration across life domains** through a shared system of truth.
 
 ---
 
-## Phased roadmap
+## Product principles
 
-### Phase 5 — New User Access & Onboarding (planned — after Phase 6)
-
-Enable a real second user to receive an invite, create an account with
-credentials, log in to an empty property, and be guided through setup by the
-Agent — with no manual intervention from the owner.
-
-**Exit criteria (hard):** Two successful end-to-end tests:
-1. Erin uses the shared account at a known URL, logs in, and can view and
-   interact with the existing property.
-2. A second independent tester (friend or parent) receives an invite, creates
-   their own account, logs into a blank notebook, and uses the Agent to create
-   their first property and at least one project.
-
-**Slices:**
-
-**5-A: Invite flow**
-- Owner can generate an invite link from within the app (or a simple admin
-  page) that creates a Supabase auth invitation email
-- Invited user clicks link → lands on an account-creation page (set password)
-- On first login, user is a member of no properties
-
-**5-B: Blank-state onboarding**
-- When a user has no active properties, the Agent greets them with a guided
-  onboarding flow: name your property, provide an address or Zillow/Redfin URL,
-  set a first goal
-- Agent creates the property record, sets the cookie, and redirects to the
-  Notebook — no manual DB work required
-
-**5-C: Erin test**
-- Walk Erin through the existing login at the Vercel URL
-- Confirm she can view the property, interact with tasks, and use the Agent
-- Fix any friction discovered
-
-**5-D: Independent tester test**
-- Invite a friend or parent via the new invite flow
-- Observe or debrief — note every point of confusion
-- Fix blocking issues before Phase 8
+1. **Lattice first.** Parcel is a domain, not the whole product.
+2. **Unified global context.** Financial, temporal, and planning decisions should be made against a shared cross-domain layer.
+3. **Personal value first, market awareness second.** The product should improve the user's real life while staying structurally capable of broader value.
+4. **Staged autonomy.** Agents earn trust through bounded execution, not open-ended authority.
+5. **Low-cost by default.** Keep infrastructure lean and use model capability intentionally.
+6. **Stability before expansion.** New domains and advanced autonomy should not be layered onto an unstable core.
 
 ---
 
-### Phase 6 — Interactivity & Visual Layer (active)
+## Current state
 
-Make the Notebook more dynamic and visually rich.
+### What already exists
 
-**Slices:**
+Parcel is live and meaningfully functional.
 
-**6-A: Drag-and-drop scheduling**
-- Projects can be dragged between quarters on the Budget or Timeline tab
-- Dragging updates the project's target quarter (new field or existing)
-- Optionally: dragging a project onto the Calendar view creates or updates
-  a CalendarEvent for that project's date range
+Built and working at a meaningful level:
+- projects, tasks, goals, budgets, timelines, purchases, references, assets
+- property details and documents
+- property agent with multiple tools
+- multi-property / multi-user-ready architecture with RLS
+- onboarding for a new independent user
+- deployed production environment
 
-**6-B: Visual tab**
-- Property map view: satellite image or uploaded floor plan as backdrop
-- Zones / areas annotated on the map (garden, barn, driveway, etc.)
-- Assets and projects linkable to a zone
-- Clicking a zone shows linked projects and assets
+This product has already proven that the concept is valuable in real use. See prior summary and recent notes for detailed implementation history.
 
-**6-C: Parsing improvements**
-- Improve Agent's Zillow/Redfin parsing (consider Firecrawl integration if
-  the manual-paste fallback remains too rough)
-- Better extraction of year built, sq footage, lot size from listing text
-- Confidence scoring: Agent flags fields it isn't sure about before writing
+### Known reality
 
----
+Before the broader Workspace vision can be layered on cleanly, Parcel needs a stabilization pass.
 
-### Phase 7 — Agent Evolution & Autonomous QA
-
-Elevate the Agent from a reactive tool to an ongoing product intelligence layer,
-and establish a real automated QA cadence.
-
-**Slices:**
-
-**7-A: PM Agent**
-- A persistent "Product Manager" agent that knows the project's goals,
-  architectural principles (from CLAUDE.md), and current roadmap (from PLAN.md)
-- Runs on demand or on a schedule; reads recent session notes and QA reports
-- Produces a prioritized improvement log with specific, actionable suggestions
-- Can optionally open GitHub issues for flagged items
-
-**7-B: QA Agent (automated)**
-- Implemented as a **GitHub Actions scheduled workflow** (not a Claude Code
-  session cron — see decision log) running nightly or on push to main
-- Checks: TypeScript build clean, RLS policy gaps, broken API routes, UI
-  flow smoke tests, property-scoping correctness
-- Output: `QA_REPORTS/YYYY-MM-DD.md` committed to the repo (or as a PR
-  artifact), flagging any regressions
-- PM Agent reads QA reports as part of its context
-
-**7-C: Goals and evolution principles**
-- Define the evolution charter for the PM Agent: what this product should
-  and should not become, quality bar, aesthetic direction, non-negotiables
-- Stored as a document the PM Agent reads on every run
-- First draft written collaboratively in session, then owned by the user
+Known concerns include:
+- user-reported defects still needing triage and resolution
+- agent route monolith needing modularization
+- missing or thin automated test coverage
+- need for stronger observability and QA cadence
+- need for guardrails around future autonomous behavior
 
 ---
 
-### Phase 8 — Polish, Final QA & Sustainability
+## Roadmap overview
 
-Bring the product to a state that is pleasant to hand to a new user and
-sustainable to maintain long-term with minimal session overhead.
+### Phase A — Parcel Stabilization & Hardening (active)
 
-**Slices:**
+Objective:
+Make Parcel reliable, reviewable, and easier to evolve before adding major new architecture.
 
-**8-A: Pizazz & usability pass**
-- Final round of UI polish: spacing, transitions, empty states, loading states
-- Maneuverability improvements: keyboard shortcuts, tab URL state (browser
-  back works), deep links to specific projects
-- Any remaining rough edges surfaced during Phases 5-7 testing
+Why now:
+The fastest path to a strong Workspace is to stabilize the mature domain first rather than layering complexity onto moving ground.
 
-**8-B: Final QA run**
-- Full QA Agent run against the production deployment
-- PM Agent produces a final improvement log
-- Any blocking issues fixed before distribution
+#### A1. Defect triage and resolution
+- gather and write down Erin and Dad defects clearly
+- reproduce each defect with steps, expected behavior, and actual behavior
+- resolve blockers first, then friction points
+- close or defer each item explicitly
 
-**8-C: Tester distribution**
-- Invite one friend or parent (independent of the Erin test) to use the app
-  for a real project on their own property
-- Observe or debrief — document friction
-- Decide what (if anything) to fix before calling it stable
+#### A2. Route and codebase hardening
+- break large monolithic routes, especially agent-heavy files, into modules
+- enforce property/workspace scoping patterns consistently
+- reduce hidden coupling between UI, API, and tool logic
 
-**8-D: Sustainability mode**
-- Define what "maintenance" looks like: how often to run a QA pass, how to
-  handle Supabase/Vercel/Anthropic API changes, how to onboard future testers
-- Archive completed phases in this document, keep roadmap current
-- Hand off to PM Agent as the ongoing steward of the improvement backlog
+#### A3. Technical guardrails
+- add stronger validation around critical routes and tool inputs
+- review sensitive flows for blast radius
+- ensure restricted-zone rules are documented and followed
 
----
+#### A4. Baseline observability
+- establish logging and failure capture sufficient for debugging and admin review
+- define what gets recorded from runtime failures, agent errors, and user friction
+- create a lightweight issue and review cadence
 
-### Phase 4 — Aesthetics, Maneuverability & Access ✓ Complete
-
-Polished the product for real daily use, extended access, and deployed to Vercel.
-
-**Built:**
-- Redesigned login page: split-screen brand panel with topographic SVG,
-  "Parcel" wordmark in Playfair Display, warm-white form panel
-- Property archive and switch: archive button (owner-only, only when >1
-  property), cookie-based property switching, archived recovery UI
-- Notebook header redesigned: property name, active project count, open tasks,
-  current quarter + budgeted amount
-- AutoRefresh on window focus (keeps Notebook current without manual reload)
-- Calendar tab with CalendarEvent CRUD
-- Purchases tab with Purchase CRUD
-- Ongoing tasks / To-Do tab restructure (Suggested / Ongoing / Project badges)
-- Agent: parse_listing, update_property_details, create_asset tools
-- Agent: onboarding system prompt rewrite (directive about Zillow/Redfin parsing)
-- Agent: parse API (sub-call to Haiku for structured extraction)
-- Property scoping fixed on all server pages (home-details, references,
-  purchases all now respect the cookie-selected property)
-- Layout: archived properties filtered from property switcher
-- Budget line fields unified (estimated_amount, actual_amount)
-- Weather integration in Suggestions (OpenWeatherMap 5-day forecast)
-- Multiple TypeScript build errors resolved; clean build on Vercel
-
-**Migrations shipped:** 022–025 (approx)
+**Exit criteria:**
+- critical reported defects resolved or intentionally deferred with rationale
+- major agent monolith split to a maintainable structure
+- core runtime failures are observable
+- Parcel feels stable enough to confidently use and demo
 
 ---
 
-### Phase 3 — The Consultant ✓ Complete
+### Phase B — QA Foundation
 
-Agent gained broader capabilities and the Notebook became fully interactive.
+Objective:
+Create a real QA backbone before introducing admin-agent-led product evolution.
 
-**Built:**
-- Interactive task status cycling in the Notebook UI
-- Agent can modify existing projects, tasks, goals, and budgets
-- Goals layer with named goals, priority hierarchy, rank badges
-- Budget model unified (estimated + actual per line item)
-- Parent project relationships
-- Project archive view (Active / Completed / Cancelled tabs)
-- Historical project entry form
-- To-Do restructure: unified timeline list with category badges and filters
-- Ongoing tasks table
-- Home Details page with Details, Documents, Assets, Photos tabs
-- Agent document parsing with confirmation modal
-- Suggestions API with property details + asset inventory context
+Why now:
+A QA agent without a good test and observability base becomes a narrator, not a useful operator.
 
-**Migrations shipped:** 011–021
+#### B1. Fast review path
+Implement a quick technical review mode that can be triggered frequently.
+
+Checks should include:
+- build / typecheck
+- lint or equivalent static review
+- critical route verification
+- auth and permissions checks
+- scoping correctness checks
+- key runtime smoke checks
+
+#### B2. Deep review path
+Implement a slower, richer review mode for broader quality validation.
+
+Checks should include:
+- simulated user flows
+- onboarding review
+- property / domain workflows
+- key user-facing agent flows
+- UX and trust issues surfaced through realistic usage
+
+#### B3. QA reporting
+- define report format for fast and deep reviews
+- store reports in-repo or in a durable review location
+- ensure reports are readable by both the user and future PM/QA agents
+
+**Exit criteria:**
+- fast QA run is easy to trigger and trustworthy
+- deep QA run exists, even if still limited in scope
+- QA reports produce actionable output rather than noise
 
 ---
 
-### Phase 2 — The First Agent Workflow ✓ Complete
+### Phase C — Admin Agent Foundation
 
-Agent with add-project capability. Deployed to Vercel.
+Objective:
+Introduce the internal team: PM Agent and QA Agent, but only on top of a stable enough base.
+
+Why now:
+These agents should accelerate the product, not compensate for missing fundamentals.
+
+#### C1. Product Manager Agent v1
+Responsibilities:
+- read vision, constraints, roadmap, session notes, and QA reports
+- identify gaps, debt, opportunities, and sequencing risks
+- recommend missing restricted zones or guardrails
+- propose roadmap slices and priorities
+- challenge decisions that optimize too narrowly for current use if broader value is being lost
+- recommend cost-conscious model routing and workflow improvements
+
+#### C2. QA Agent v1
+Responsibilities:
+- run or coordinate fast review mode
+- summarize regressions and trust issues
+- recommend targeted fixes
+- escalate risks clearly
+
+#### C3. Admin dashboard foundation
+- create a simple internal admin surface for invoking PM and QA workflows
+- keep this operational and plain rather than over-designed
+- clearly separate internal admin functions from user-facing product features
+
+**Exit criteria:**
+- PM Agent produces useful prioritization rather than generic advice
+- QA Agent helps surface real regressions efficiently
+- owner can use both as an internal team without ambiguity
 
 ---
 
-### Phase 1 — The Skeleton ✓ Complete
+### Phase D — Parcel Refinement with Admin-Agent Support
 
-User and Property scaffolding with RLS. Core domain-agnostic data model.
-Basic Notebook UI. Hand-seeded farm plan. Auth via magic link.
+Objective:
+Use the new internal team to speed up remaining Parcel polish and reliability work.
 
-**Migrations shipped:** 001–010
+#### D1. Parking lot review
+- review existing Parcel parking lot items
+- re-rank by user value, trust impact, and architectural leverage
+
+#### D2. Product and UX refinement
+- improve maneuverability, rough edges, and trust-building interactions
+- ensure Parcel is pleasant to use repeatedly, not just functional
+
+#### D3. Agent workflow refinement
+- improve property-agent prompts, tools, review patterns, and failure handling
+- reduce long loops and improve model-cost efficiency
+
+**Exit criteria:**
+- Parcel feels polished enough to be shown proudly and used regularly
+- outstanding debt is visible and intentionally ranked
+
+---
+
+### Phase E — Workspace Core Architecture
+
+Objective:
+Lift the product from Parcel-centric to true Workspace architecture.
+
+Why here:
+Do this only after Parcel is stable enough that the architectural move can be made intentionally.
+
+#### E1. Introduce Workspace as top-level unit
+- define Workspace entity and membership semantics
+- preserve compatibility with existing Parcel/property structures
+- model primary owner plus optional collaborators
+
+#### E2. Introduce Global Context foundation
+Build the first version of the shared cross-domain layer.
+
+Initial editable core:
+- major goals
+- strategic priorities
+- planning assumptions
+- thresholds / preferences
+- major commitments
+
+Initial derived layer:
+- budget rollups
+- conflict detection
+- planning and risk flags
+- upcoming pressure points
+
+#### E3. Shared planning model
+- define how domains publish into finances, time, and goal systems
+- avoid duplicating cross-domain planning structures inside domains
+
+**Exit criteria:**
+- Workspace exists conceptually and technically above Parcel
+- Global Context can support cross-domain reasoning in a real, not hand-wavy, way
+
+---
+
+### Phase F — Personal Domain v1
+
+Objective:
+Launch the first non-Parcel domain inside the Workspace.
+
+Scope choice:
+Personal begins as **one domain** with multiple sections. It does not begin as separate finance, health, and fitness apps.
+
+#### F1. Personal foundation
+- create Personal mode entry and information architecture
+- keep experience coherent with Parcel but not visually identical by force
+
+#### F2. Finance / planning first
+Initial focus:
+- financial planning
+- commitments and discretionary decisions
+- cross-domain tradeoff awareness
+
+Examples of intended value:
+- warn when a purchase conflicts with other planned obligations
+- surface mismatches between goals and actual choices
+- support better timing and prioritization
+
+#### F3. Defer health and fitness
+- design for them, do not fully build them yet
+- only add after Personal finance/planning proves useful and the Workspace model holds
+
+**Exit criteria:**
+- Personal provides meaningful value as a domain
+- cross-domain reasoning between Personal and Parcel is demonstrably useful
+
+---
+
+### Phase G — Controlled Autonomy Expansion
+
+Objective:
+Increase system self-support within explicit trust boundaries.
+
+#### G1. Safe-zone execution
+Allow agents to act with less friction in approved low-risk zones such as:
+- test execution
+- reporting
+- issue triage
+- documentation updates
+- constrained cleanup
+
+#### G2. Approval-aware workflows
+- ensure agents pause automatically for restricted-zone work
+- disclose cost, blast radius, and implications before proceeding
+
+#### G3. Trust calibration
+- define what evidence is required before autonomy expands
+- revisit safe zones based on observed success, not optimism
+
+**Exit criteria:**
+- agents are materially reducing manual overhead without surprising the owner
+- trust is increasing because behavior is predictable, not because the system is bold
+
+---
+
+### Phase H — Broader Domain Expansion and Optional Market Lens
+
+Objective:
+Expand only where value is real and architecture is ready.
+
+Possible future tracks:
+- health and fitness within Personal
+- travel, career, vehicles, or learning domains
+- limited trusted sharing with friends/family
+- optional market-readiness analysis and selective hardening
+
+Rules:
+- do not expand just because the architecture could support it
+- do not overfit to a commercial story if it harms actual usefulness
+- do not let a narrow current-use definition stop the product from becoming more broadly valuable
+
+---
+
+## QA model
+
+Two QA depths are intentionally supported.
+
+### Fast review
+Use frequently.
+
+Focus:
+- technical correctness
+- build health
+- route health
+- scoping and auth correctness
+- critical smoke checks
+
+### Deep review
+Use periodically.
+
+Focus:
+- simulated real user flows
+- onboarding and core task completion
+- product trust and usability
+- user-facing agent quality
+- regressions that technical checks alone miss
+
+---
+
+## Agent model
+
+### User-facing
+- Parcel / Property Agent
+- future Personal agent(s) as needed
+
+### Admin-facing
+- Product Manager Agent
+- QA Agent
+
+The admin agents are part of the owner's operating system for product development, not part of the user-facing feature set.
 
 ---
 
 ## Stack
 
 - **Next.js 15** (App Router) — unified frontend and backend
-- **Supabase** — Postgres + auth + RLS. Free tier covers personal use.
+- **Supabase** — Postgres + Auth + RLS. Free tier covers personal use.
 - **TypeScript**, **Tailwind**, **shadcn/ui**
-- **Anthropic API** — Agent runs on Claude Sonnet 4.6
+- **Anthropic API** — Agent runs on Claude Sonnet 4.6, sub-calls on Haiku 4.5
 - **Vercel** — hosting
 
-## Data model — current state
+---
+
+## Data model — current state (Parcel domain)
 
 ### Platform-level
 - **User** — Supabase Auth
@@ -253,24 +388,41 @@ Basic Notebook UI. Hand-seeded farm plan. Auth via magic link.
 ### Storage
 - **Home Agent** bucket — documents at `{property_id}/{filename}`, signed URLs
 
+---
+
+## Cost discipline
+
+Current operating preference:
+- keep hosting/infrastructure free or near-free where reasonable
+- add paid components only when value clearly justifies them
+- keep model use efficient through task routing and bounded context
+
+Hard rule:
+- any task likely to exceed **$1.00** in token/runtime cost requires disclosure and approval first
+
+---
+
+## Open strategic questions to keep live
+
+These should remain visible as the product evolves:
+- what should the top-level branded product name become?
+- when is the Workspace architecture mature enough to support more domains?
+- when should health and fitness become active parts of Personal?
+- what evidence should justify loosening autonomy constraints?
+- what should remain personal-first versus intentionally generalized?
+- when, if ever, is broader distribution worth the additional support burden?
+
+---
+
 ## Decisions log
 
-- **2026-04-20:** Product named "Home Management Platform" (HMP). Two layers
-  per property: "Property Notebook" and "Property Agent."
 - **2026-04-20:** Domain-agnostic architecture; farm as first seeded domain.
 - **2026-04-20:** Multi-tenant-ready with RLS; sharing UI deferred.
 - **2026-04-20:** Two roles: Owner (full) and Viewer (read-only, no budget).
-- **2026-04-20:** Stack locked: Next.js 15 + Supabase + TypeScript + Tailwind
-  + shadcn/ui + Anthropic API + Vercel.
-- **2026-04-20:** Staged subagent adoption — single agent through Phase 3,
-  revisit in Phase 4.
-- **2026-04-20:** Budget lines unified to single rows with estimated_amount
-  and actual_amount.
-- **2026-04-20:** Document parsing uses Claude's native PDF/image reading +
-  a paste-text fallback. Firecrawl parked for later.
+- **2026-04-20:** Stack locked: Next.js 15 + Supabase + TypeScript + Tailwind + shadcn/ui + Anthropic API + Vercel.
+- **2026-04-20:** Budget lines unified to single rows with estimated_amount and actual_amount.
+- **2026-04-20:** Document parsing uses Claude's native PDF/image reading + a paste-text fallback.
 - **2026-04-21:** Product name finalized as "Parcel."
-- **2026-04-21:** Automated QA to be implemented as GitHub Actions scheduled
-  workflow, not Claude Code session cron — session crons are lost when context
-  limit is hit, even if terminal stays open.
-- **2026-04-21:** PM Agent and QA Agent scoped to Phase 7; evolution charter
-  to be written collaboratively and stored as a document the PM Agent reads.
+- **2026-04-21:** Automated QA to be implemented as GitHub Actions scheduled workflow, not Claude Code session cron.
+- **2026-04-21:** PM Agent and QA Agent scoped to Phase C; evolution charter to be written collaboratively.
+- **2026-04-22:** Product expanded to "Lattice" — Parcel becomes a domain within a broader Life OS. CLAUDE.md and PLAN.md replaced with Lattice versions. Active work: Phase A (Parcel stabilization).
