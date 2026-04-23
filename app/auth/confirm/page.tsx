@@ -16,6 +16,7 @@ export default function ConfirmPage() {
     const refresh_token = params.get('refresh_token')
 
     if (!access_token || !refresh_token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus('Invalid or expired link. Redirecting…')
       setTimeout(() => { window.location.href = '/login?error=auth' }, 2000)
       return

@@ -193,7 +193,7 @@ export function OverviewTab({ projects, events, goals, quarterlyBudgets, ongoing
           <div className="px-5 pt-5 pb-4 space-y-2 border-b" style={{ borderColor: 'oklch(0.88 0.06 155)' }}>
             <p className="text-base font-semibold text-zinc-800 leading-snug">Welcome to Parcel.</p>
             <p className="text-sm leading-relaxed" style={{ color: 'oklch(0.48 0.015 75)' }}>
-              Parcel is your property's notebook and thinking partner. Track projects, budgets, and timelines in one place — then talk to your Agent to plan what's next, work through tradeoffs, or just think out loud about your home.
+              Parcel is your property&apos;s notebook and thinking partner. Track projects, budgets, and timelines in one place — then talk to your Agent to plan what&apos;s next, work through tradeoffs, or just think out loud about your home.
             </p>
             <button
               onClick={() => openChatWith("Can you give me a quick walkthrough of what Parcel can do? I'm just getting started and want to understand how to use it well.")}

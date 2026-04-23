@@ -50,6 +50,7 @@ export function PurchasePanel({ purchase, isNew, defaultDate, projects, onClose,
 
   useEffect(() => {
     if (purchase) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setItem(purchase.item_name)
       setVendor(purchase.vendor ?? '')
       setPrice(purchase.price != null ? String(purchase.price) : '')

@@ -151,7 +151,7 @@ export default function WelcomePage() {
           Interested?
         </h2>
         <p className="text-base mb-8" style={{ color: 'oklch(1 0 0 / 0.60)' }}>
-          Send a quick note and I'll get you set up.
+          Send a quick note and I&apos;ll get you set up.
         </p>
         <a href={mailto}
           className="inline-block px-8 py-4 rounded-xl text-base font-medium text-white transition-colors"

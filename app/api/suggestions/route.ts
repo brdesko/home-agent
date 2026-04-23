@@ -104,7 +104,7 @@ export async function GET() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const taskList = ((taskRows ?? []) as any[])
-    .map((t: any) => {
+    .map(t => {
       const p = Array.isArray(t.projects) ? t.projects[0] : t.projects
       return `- "${t.title}" (project: ${p?.name ?? 'unknown'}, domain: ${p?.domain ?? ''}, due: ${t.due_date ?? 'no date'})`
     })

@@ -103,6 +103,7 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTargetBudget(project?.target_budget != null ? String(project.target_budget) : '')
     setActualSpend(project?.actual_spend   != null ? String(project.actual_spend)  : '')
     setLines(project?.budget_lines ?? [])

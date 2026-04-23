@@ -41,6 +41,7 @@ export function AgentChat() {
     sentCtx.current = true
     router.replace('/agent')
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (taskTitle) setCascadeLabel(`Completed: ${taskTitle}`)
 
     // Append the cascade message to the existing shared conversation
@@ -183,7 +184,7 @@ export function AgentChat() {
           {projectCreated && (
             <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-green-800 font-medium">"{projectCreated.name}" added.</p>
+                <p className="text-sm text-green-800 font-medium">&ldquo;{projectCreated.name}&rdquo; added.</p>
                 <p className="text-xs text-green-700 mt-0.5">
                   {[
                     projectCreated.taskCount > 0 && `${projectCreated.taskCount} task${projectCreated.taskCount !== 1 ? 's' : ''}`,

@@ -81,6 +81,7 @@ export function PurchasesView({ initialPurchases, projects }: Props) {
   , [purchases])
 
   // Filtered list
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     return purchases.filter(p => {

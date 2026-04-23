@@ -101,7 +101,7 @@ function ProjectLinker({
   return (
     <div className="border border-blue-100 rounded-lg p-4 space-y-3 bg-blue-50/40">
       <div>
-        <p className="text-sm font-medium text-zinc-800">Add projects to "{goalName}"</p>
+        <p className="text-sm font-medium text-zinc-800">Add projects to &ldquo;{goalName}&rdquo;</p>
         <p className="text-xs text-zinc-500 mt-0.5">Select existing projects to link, or skip to add later.</p>
       </div>
 

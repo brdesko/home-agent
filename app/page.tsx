@@ -116,7 +116,7 @@ export default async function HomePage() {
               Open the Agent →
             </Link>
             <p className="text-xs text-zinc-400">
-              Try: <span className="italic">"My property is at 123 Main St. Here's the Zillow link: ..."</span>
+              Try: <span className="italic">&ldquo;My property is at 123 Main St. Here&apos;s the Zillow link: ...&rdquo;</span>
             </p>
           </div>
           <div className="border border-zinc-100 rounded-xl p-5 text-left space-y-3">

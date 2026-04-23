@@ -68,7 +68,7 @@ function ProjectGroup({ projects, onSelect }: { projects: ProjectRow[]; onSelect
           <FolderOpen className="w-5 h-5" style={{ color: 'oklch(0.50 0.10 155)' }} />
         </div>
         <p className="text-sm font-medium text-zinc-600">No projects yet.</p>
-        <p className="text-xs text-zinc-400">Ask the Agent to add one, or describe a project and it'll structure it for you.</p>
+        <p className="text-xs text-zinc-400">Ask the Agent to add one, or describe a project and it&apos;ll structure it for you.</p>
       </div>
     )
   }

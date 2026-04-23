@@ -39,6 +39,7 @@ export function ReferencePanel({ reference, isNew, onClose, onSave, onDelete }: 
   const nameRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setName(reference?.name  ?? '')
     setType(reference?.type  ?? 'vendor')
     setUrl(reference?.url    ?? '')
