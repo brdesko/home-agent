@@ -19,6 +19,10 @@ export async function POST(req: NextRequest) {
     messages?: { role: 'user' | 'assistant'; content: string }[]
   }
 
+  if (!signedUrl) return NextResponse.json({ error: 'signedUrl required' }, { status: 400 })
+  if (messages?.some(m => !['user', 'assistant'].includes(m.role)))
+    return NextResponse.json({ error: 'Invalid message role' }, { status: 400 })
+
   const { data: propData } = await supabase
     .from('properties')
     .select('name, address')

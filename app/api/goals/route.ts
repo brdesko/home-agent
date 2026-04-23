@@ -12,6 +12,8 @@ export async function POST(req: NextRequest) {
 
   const { name, description, priority, target_budget } = await req.json()
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 })
+  if (priority && !['low', 'medium', 'high'].includes(priority))
+    return NextResponse.json({ error: 'Invalid priority' }, { status: 400 })
 
   const { count } = await supabase
     .from('goals')

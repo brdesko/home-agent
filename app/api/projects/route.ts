@@ -2,6 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { getPropertyId } from '@/lib/get-property-id'
 
+const VALID_STATUSES  = ['planned', 'active', 'on_hold', 'complete', 'cancelled']
+const VALID_PRIORITIES = ['low', 'medium', 'high']
+const VALID_EFFORTS   = ['low', 'medium', 'high', 'very_high']
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -16,6 +20,12 @@ export async function POST(req: NextRequest) {
 
   if (!name || !domain || !status || !priority)
     return NextResponse.json({ error: 'name, domain, status, and priority are required' }, { status: 400 })
+  if (!VALID_STATUSES.includes(status))
+    return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+  if (!VALID_PRIORITIES.includes(priority))
+    return NextResponse.json({ error: 'Invalid priority' }, { status: 400 })
+  if (effort && !VALID_EFFORTS.includes(effort))
+    return NextResponse.json({ error: 'Invalid effort' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('projects')

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPropertyId } from '@/lib/get-property-id'
 
 const COLS = 'id, name, asset_type, description, make, model, serial_number, install_date, last_serviced_at, location, notes, created_at'
+const VALID_ASSET_TYPES = ['hvac', 'water-heater', 'roof', 'well-pump', 'septic', 'electrical', 'plumbing', 'appliance', 'vehicle', 'equipment', 'structure', 'other']
 
 export async function GET() {
   const supabase = await createClient()
@@ -35,6 +36,8 @@ export async function POST(req: NextRequest) {
   const { name, asset_type, description, make, model, serial_number, install_date, last_serviced_at, location, notes } = body
   if (!name || !asset_type)
     return NextResponse.json({ error: 'name and asset_type are required' }, { status: 400 })
+  if (!VALID_ASSET_TYPES.includes(asset_type))
+    return NextResponse.json({ error: 'Invalid asset_type' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('assets')
