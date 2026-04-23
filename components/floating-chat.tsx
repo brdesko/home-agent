@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { MessageSquare, X, Send, Minimize2 } from 'lucide-react'
-import { useAgentContext } from './agent-context'
+import { useAgentContext, type AgentMessage } from './agent-context'
 
 const SAGE = 'oklch(0.50 0.10 155)'
 
@@ -36,7 +36,7 @@ export function FloatingChat() {
 
   async function sendText(text: string) {
     if (!text.trim() || loadingRef.current) return
-    const userMsg: Message = { role: 'user', content: text.trim() }
+    const userMsg: AgentMessage = { role: 'user', content: text.trim() }
     const next = [...messagesRef.current, userMsg]
     messagesRef.current = next
     setMessages(next)

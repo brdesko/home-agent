@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { getPropertyId } from '@/lib/get-property-id'
 
 const anthropic = new Anthropic()
 
@@ -12,6 +13,9 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const PROPERTY_ID = await getPropertyId(supabase, user.id)
+  if (!PROPERTY_ID) return NextResponse.json({ error: 'No property found' }, { status: 404 })
+
   const { id } = await params
   const { projectName } = await req.json()
 
@@ -20,6 +24,7 @@ export async function POST(
     .from('tasks')
     .update({ status: 'done' })
     .eq('id', id)
+    .eq('property_id', PROPERTY_ID)
     .select('id, title')
     .single()
 
