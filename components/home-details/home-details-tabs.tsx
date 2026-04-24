@@ -70,7 +70,7 @@ export function HomeDetailsTabs({ property, docs, assets, isOwner }: Props) {
 
       {tab === 'Visual' ? (
         <div className="px-6 py-8">
-          <PropertyVisual propertyAddress={property.address} />
+          <PropertyVisual isOwner={isOwner} />
         </div>
       ) : (
         <div className="max-w-4xl mx-auto px-6 py-8">

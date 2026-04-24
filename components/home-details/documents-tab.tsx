@@ -102,14 +102,18 @@ export function DocumentsTab({ initial, isOwner }: Props) {
   async function parseDoc(path: string) {
     setParsing(path); setParseResult(null); setParseErr(null)
     try {
-      const res = await fetch('/api/agent/parse-document', {
+      const res = await fetch('/api/agent/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path }),
+        body: JSON.stringify({ source: 'document', path }),
       })
-      const data = await res.json() as { error?: string }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setParseErr((err as { error?: string }).error ?? 'Parse failed'); setParsing(null); return
+      }
+      const data = await readParseStream(res) as { error?: string }
       setParsing(null)
-      if (!res.ok || data.error) { setParseErr(data.error ?? 'Parse failed'); return }
+      if (data.error) { setParseErr(data.error); return }
       setParseResult(data as ParseResult)
     } catch (e) {
       setParsing(null)

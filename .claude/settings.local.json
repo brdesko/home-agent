@@ -21,7 +21,13 @@
       "Bash(cmd /c \"npx tsc --noEmit 2>&1 | head -40\")",
       "Bash(node -e ' *)",
       "WebFetch(domain:images.homes.com)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(sed -n '115,125p' app/page.tsx)",
+      "Bash(sed -n '150,158p' app/welcome/page.tsx)",
+      "Bash(sed -n '66,75p' components/notebook/goals-tab.tsx)",
+      "Bash(sed -n '100,108p' components/notebook/goals-tab.tsx)",
+      "Bash(sed -n '192,200p' components/notebook/tabs/overview-tab.tsx)",
+      "Bash(xargs ls *)"
     ]
   },
   "enabledMcpjsonServers": [

@@ -134,6 +134,7 @@ function TaskRow({
   isOwner,
   allProjects,
   onSelectProject,
+  onSuggestionSaved,
 }: {
   task: UnifiedTask
   project: ProjectRow | null
@@ -141,11 +142,33 @@ function TaskRow({
   isOwner: boolean
   allProjects: ProjectRow[]
   onSelectProject: (p: ProjectRow) => void
+  onSuggestionSaved?: (taskId: string) => void
 }) {
   const [expanded,     setExpanded]     = useState(false)
   const [showCostForm, setShowCostForm] = useState(false)
   const [completed,    setCompleted]    = useState(task.status === 'done')
   const [followUp,     setFollowUp]     = useState<string | null>(null)
+  const [saving,       setSaving]       = useState(false)
+  const [saved,        setSaved]        = useState(false)
+
+  async function handleSaveAsTask(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (saving || saved) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/ongoing-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: task.title, description: null, recurrence: null, active_months: null }),
+      })
+      if (res.ok) {
+        setSaved(true)
+        onSuggestionSaved?.(task.id)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function handleComplete(e: React.MouseEvent) {
     e.stopPropagation()
@@ -236,6 +259,20 @@ function TaskRow({
               >
                 Go to project →
               </button>
+            )}
+
+            {isOwner && task.category === 'suggested' && !saved && (
+              <button
+                onClick={handleSaveAsTask}
+                disabled={saving}
+                className="text-xs px-3 py-1.5 border border-amber-200 rounded-md text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors disabled:opacity-40"
+              >
+                {saving ? 'Saving…' : 'Save as task'}
+              </button>
+            )}
+
+            {saved && (
+              <span className="text-xs px-3 py-1.5 text-zinc-400">Saved to ongoing tasks</span>
             )}
 
             {isOwner && task.projectId && !showCostForm && (
@@ -410,6 +447,8 @@ export function TodoTab({ projects, goals, ongoingTasks, isOwner }: Props) {
       ).length
     : 0
 
+  const [savedSuggestionIds, setSavedSuggestionIds] = useState<Set<string>>(new Set())
+
   function renderTask(t: UnifiedTask) {
     const project = t.projectId ? projects.find(p => p.id === t.projectId) ?? null : null
     return (
@@ -421,6 +460,7 @@ export function TodoTab({ projects, goals, ongoingTasks, isOwner }: Props) {
         isOwner={isOwner}
         allProjects={projects}
         onSelectProject={setSelectedProject}
+        onSuggestionSaved={(id) => setSavedSuggestionIds(prev => new Set([...prev, id]))}
       />
     )
   }

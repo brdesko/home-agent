@@ -315,4 +315,79 @@ export const tools: Anthropic.Tool[] = [
       required: ['name', 'asset_type'],
     },
   },
+
+  // ── Visual config ────────────────────────────────────────────────────────────
+
+  {
+    name: 'get_property_photos',
+    description: 'Lists photos uploaded to this property with their signed URLs. Call this when the user wants to derive or update the site plan from a photo — use it to find available photos, then call derive_visual_from_photo with the chosen URL.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: [],
+    },
+  },
+
+  {
+    name: 'derive_visual_from_photo',
+    description: 'Analyses a property photo to derive a 2D site plan layout. Pass an aerial or overhead photo URL (get it from get_property_photos). This will generate zone positions and building footprints and save them as the property visual config. Best results with satellite, drone, or overhead photos.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        photo_url:    { type: 'string', description: 'Signed URL of the photo to analyse (from get_property_photos)' },
+        config_notes: { type: 'string', description: 'Optional note about the source, e.g. "Derived from drone photo Apr 2026"' },
+      },
+      required: ['photo_url'],
+    },
+  },
+
+  {
+    name: 'update_visual_config',
+    description: 'Saves or updates the property 2D site plan config directly. Use this to refine zone positions after the user gives feedback ("move the barn further west", "the driveway is wrong"). Coordinate space: 0–100 wide × 0–80 tall.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        site_config: {
+          type: 'object' as const,
+          description: 'Full site config: { bounds?: { width, height }, zones: [{ id, name, color, x, y, width, height, description? }], buildings?: [{ id, label?, x, y, width, height, color? }] }',
+        },
+        config_notes: { type: 'string', description: 'Optional note about what changed' },
+      },
+      required: ['site_config'],
+    },
+  },
+
+  {
+    name: 'get_rooms',
+    description: 'Returns rooms for this property. Filter by zone_id to see rooms in one zone. Use before manage_room to see existing room IDs.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        zone_id: { type: 'string', description: 'Filter to a specific zone (e.g. "house", "barn"). Omit for all zones.' },
+      },
+      required: [],
+    },
+  },
+
+  {
+    name: 'manage_room',
+    description: 'Creates, updates, or deletes a room within a zone. Use create after floor plan analysis. Use update to change status or notes. Call get_rooms first to get IDs for update/delete.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        action:     { type: 'string', enum: ['create', 'update', 'delete'] },
+        zone_id:    { type: 'string', description: 'Required for create — which zone this room belongs to' },
+        room_id:    { type: 'string', description: 'Required for update and delete' },
+        name:       { type: 'string', description: 'Room name (create/update)' },
+        status:     { type: 'string', enum: ['not_started', 'in_progress', 'complete'], description: 'Room status (create/update)' },
+        notes:      { type: 'string', description: 'Optional notes (create/update)' },
+        sort_order: { type: 'number', description: 'Display order (create/update)' },
+        pos_x: { type: 'number', description: 'X position 0–100 within zone floor plan (create/update, null = schematic tile)' },
+        pos_y: { type: 'number', description: 'Y position 0–100 within zone floor plan (create/update)' },
+        pos_w: { type: 'number', description: 'Width 0–100 within zone floor plan (create/update)' },
+        pos_h: { type: 'number', description: 'Height 0–100 within zone floor plan (create/update)' },
+      },
+      required: ['action'],
+    },
+  },
 ]

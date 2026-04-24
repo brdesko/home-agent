@@ -432,5 +432,213 @@ export async function runTool(
     return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, id: data.id, name: data.name, asset_type: data.asset_type }) }
   }
 
+  // ── get_property_photos ──────────────────────────────────────────────────────
+  if (block.name === 'get_property_photos') {
+    const { data: files, error } = await supabase.storage
+      .from('Home Agent')
+      .list(PROPERTY_ID, { limit: 50, sortBy: { column: 'created_at', order: 'desc' } })
+
+    if (error) return { type: 'tool_result', tool_use_id: id, content: `Error listing photos: ${error.message}`, is_error: true }
+    if (!files?.length) return { type: 'tool_result', tool_use_id: id, content: 'No photos uploaded yet. Ask the user to upload photos in the Photos tab first.' }
+
+    const imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic']
+    const photos = files.filter(f => imageExts.some(ext => f.name.toLowerCase().endsWith(ext)))
+    if (!photos.length) return { type: 'tool_result', tool_use_id: id, content: 'No image files found in property photos.' }
+
+    const signed = await Promise.all(
+      photos.map(async f => {
+        const path = `${PROPERTY_ID}/${f.name}`
+        const { data: urlData } = await supabase.storage.from('Home Agent').createSignedUrl(path, 3600)
+        return { name: f.name, path, url: urlData?.signedUrl ?? null }
+      })
+    )
+
+    return { type: 'tool_result', tool_use_id: id, content: JSON.stringify(signed.filter(p => p.url)) }
+  }
+
+  // ── derive_visual_from_photo ─────────────────────────────────────────────────
+  if (block.name === 'derive_visual_from_photo') {
+    const { photo_url, config_notes } = block.input as { photo_url: string; config_notes?: string }
+
+    const DERIVE_PROMPT = `You are analysing an aerial or overhead photograph of a property to create a 2D site plan.
+
+Identify all major zones and structures visible. Return ONLY valid JSON with no markdown, matching this exact structure:
+
+{
+  "bounds": { "width": 100, "height": 80 },
+  "zones": [
+    { "id": "house", "name": "House & Gardens", "color": "#4ade80", "x": 10, "y": 5, "width": 40, "height": 35, "description": "Main residence and gardens" }
+  ],
+  "buildings": [
+    { "id": "main_house", "label": "House", "x": 15, "y": 8, "width": 18, "height": 22, "color": "#8ba3b8" }
+  ]
+}
+
+Rules:
+- Coordinate space is 0–100 wide × 0–80 tall. Position everything proportionally.
+- Zones are large named areas (house zone, barn zone, pasture, pool, drive, etc.)
+- Buildings are actual structures within zones
+- Use clear, lowercase IDs: house, barn, pool, pasture, woodland, drive, garage, shed, etc.
+- Use visually distinct, muted hex colors for zones
+- Include 2–8 zones based on what you see
+- Top of image is typically north
+- Zones should tile to cover the full property without large gaps`
+
+    try {
+      const result = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2048,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'url', url: photo_url } },
+            { type: 'text',  text: DERIVE_PROMPT },
+          ],
+        }],
+      })
+
+      const raw = result.content
+        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+        .map(b => b.text).join('').trim()
+
+      // Extract JSON
+      let site_config: unknown = null
+      try { site_config = JSON.parse(raw) } catch {
+        const m = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
+        if (m) try { site_config = JSON.parse(m[1].trim()) } catch { /* */ }
+        if (!site_config) {
+          const s = raw.indexOf('{'), e = raw.lastIndexOf('}')
+          if (s !== -1 && e > s) try { site_config = JSON.parse(raw.slice(s, e + 1)) } catch { /* */ }
+        }
+      }
+
+      if (!site_config) {
+        return { type: 'tool_result', tool_use_id: id, content: 'Could not parse a valid site config from the photo. Try a clearer overhead or aerial image.', is_error: true }
+      }
+
+      const { error: saveErr } = await supabase
+        .from('property_visual_config')
+        .upsert(
+          { property_id: PROPERTY_ID, site_config, config_notes: config_notes ?? 'Derived from photo', updated_at: new Date().toISOString() },
+          { onConflict: 'property_id' }
+        )
+
+      if (saveErr) return { type: 'tool_result', tool_use_id: id, content: `Derived config but failed to save: ${saveErr.message}`, is_error: true }
+
+      changes.push({ type: 'project_updated', summary: 'Derived and saved property site plan from photo' })
+      return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, site_config }) }
+    } catch (e) {
+      return { type: 'tool_result', tool_use_id: id, content: `Error analysing photo: ${String(e)}`, is_error: true }
+    }
+  }
+
+  // ── update_visual_config ─────────────────────────────────────────────────────
+  if (block.name === 'update_visual_config') {
+    const { site_config, config_notes } = block.input as { site_config: unknown; config_notes?: string }
+
+    const { error } = await supabase
+      .from('property_visual_config')
+      .upsert(
+        { property_id: PROPERTY_ID, site_config, config_notes: config_notes ?? null, updated_at: new Date().toISOString() },
+        { onConflict: 'property_id' }
+      )
+
+    if (error) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error.message}`, is_error: true }
+    changes.push({ type: 'project_updated', summary: 'Updated property visual config' })
+    return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true }) }
+  }
+
+  // ── get_rooms ────────────────────────────────────────────────────────────────
+  if (block.name === 'get_rooms') {
+    const { zone_id } = block.input as { zone_id?: string }
+
+    let query = supabase
+      .from('rooms')
+      .select('id, zone_id, name, status, notes, sort_order, pos_x, pos_y, pos_w, pos_h')
+      .eq('property_id', PROPERTY_ID)
+      .order('sort_order')
+      .order('name')
+
+    if (zone_id) query = query.eq('zone_id', zone_id)
+
+    const { data, error } = await query
+    if (error) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error.message}`, is_error: true }
+    return { type: 'tool_result', tool_use_id: id, content: JSON.stringify(data ?? []) }
+  }
+
+  // ── manage_room ──────────────────────────────────────────────────────────────
+  if (block.name === 'manage_room') {
+    const input = block.input as {
+      action: 'create' | 'update' | 'delete'
+      zone_id?: string; room_id?: string; name?: string; status?: string
+      notes?: string; sort_order?: number
+      pos_x?: number; pos_y?: number; pos_w?: number; pos_h?: number
+    }
+
+    if (input.action === 'create') {
+      if (!input.zone_id || !input.name) {
+        return { type: 'tool_result', tool_use_id: id, content: 'zone_id and name are required for create', is_error: true }
+      }
+      const { data, error } = await supabase
+        .from('rooms')
+        .insert({
+          property_id: PROPERTY_ID,
+          zone_id:     input.zone_id,
+          name:        input.name,
+          status:      input.status     ?? 'not_started',
+          notes:       input.notes      ?? null,
+          sort_order:  input.sort_order ?? 0,
+          pos_x: input.pos_x ?? null, pos_y: input.pos_y ?? null,
+          pos_w: input.pos_w ?? null, pos_h: input.pos_h ?? null,
+        })
+        .select('id, name, zone_id, status')
+        .single()
+
+      if (error || !data) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error?.message}`, is_error: true }
+      changes.push({ type: 'project_updated', summary: `Created room: ${data.name}` })
+      return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, ...data }) }
+    }
+
+    if (input.action === 'update') {
+      if (!input.room_id) return { type: 'tool_result', tool_use_id: id, content: 'room_id is required for update', is_error: true }
+      const updates: Record<string, unknown> = {}
+      if (input.name       !== undefined) updates.name       = input.name
+      if (input.status     !== undefined) updates.status     = input.status
+      if (input.notes      !== undefined) updates.notes      = input.notes
+      if (input.sort_order !== undefined) updates.sort_order = input.sort_order
+      if (input.pos_x      !== undefined) updates.pos_x      = input.pos_x
+      if (input.pos_y      !== undefined) updates.pos_y      = input.pos_y
+      if (input.pos_w      !== undefined) updates.pos_w      = input.pos_w
+      if (input.pos_h      !== undefined) updates.pos_h      = input.pos_h
+
+      const { data, error } = await supabase
+        .from('rooms')
+        .update(updates)
+        .eq('id', input.room_id)
+        .eq('property_id', PROPERTY_ID)
+        .select('id, name, status')
+        .single()
+
+      if (error || !data) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error?.message}`, is_error: true }
+      changes.push({ type: 'project_updated', summary: `Updated room: ${data.name}` })
+      return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, ...data }) }
+    }
+
+    if (input.action === 'delete') {
+      if (!input.room_id) return { type: 'tool_result', tool_use_id: id, content: 'room_id is required for delete', is_error: true }
+      const { error } = await supabase
+        .from('rooms')
+        .delete()
+        .eq('id', input.room_id)
+        .eq('property_id', PROPERTY_ID)
+
+      if (error) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error.message}`, is_error: true }
+      changes.push({ type: 'project_updated', summary: 'Deleted room' })
+      return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true }) }
+    }
+
+    return { type: 'tool_result', tool_use_id: id, content: 'Unknown action — use create, update, or delete', is_error: true }
+  }
+
   return { type: 'tool_result', tool_use_id: id, content: `Unknown tool: ${block.name}`, is_error: true }
 }
