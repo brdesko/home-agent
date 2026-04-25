@@ -85,7 +85,22 @@ Outstanding Parcel items tracked as deferred WARNs:
 - Visual tab continual improvement — parked, revisit when Lattice is stable
 - Existing production properties have `lattice_id = null` — Brady's Lattice auto-creates on next property creation, or C4 shell handles bootstrap
 
-**Parcel Z next (before C3):** Zone-to-table migration, spaces rename, zone_id/space_id linkage on projects/tasks/assets/ongoing tasks, ongoing_task_instances table.
+**Parcel Z complete (2026-04-25c):**
+- `zones` table: replaces JSONB zones in `property_visual_config.site_config`; property-scoped, owner-write RLS
+- `spaces` table: replaces `rooms`; `zone_id` is now a real UUID FK; cascades on zone delete
+- Nullable `zone_id` + `space_id` FKs on `projects`, `tasks`, `assets`, `ongoing_tasks` (set null on delete)
+- `ongoing_task_instances` table: one row per task per year, unique (ongoing_task_id, year), pending/complete/skipped
+- `/api/zones`, `/api/spaces` routes added; `/api/rooms` deleted
+- Agent tools: `get_zones`, `manage_zone`, `get_spaces`, `manage_space` replace `get_rooms`/`manage_room`
+- `derive_visual_from_photo` saves zones to `zones` table; site_config stores bounds/buildings only
+- Components: `SitePlan` accepts `zones` as a separate prop; `PropertyVisual` fetches from DB
+- Migration 030 written; **must be run in Supabase before testing Visual tab**
+
+Outstanding deferred items:
+- zone_id/space_id assignment UI on projects/tasks/assets — FKs in place, UI deferred
+- Hardcoded owner names in welcome page and system prompt — Phase E
+- Visual tab continual improvement — parked
+- Existing production `lattice_id = null` on properties — C4 shell bootstrap
 
 ---
 
