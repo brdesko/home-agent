@@ -94,7 +94,14 @@ Outstanding Parcel items tracked as deferred WARNs:
 - Agent tools: `get_zones`, `manage_zone`, `get_spaces`, `manage_space` replace `get_rooms`/`manage_room`
 - `derive_visual_from_photo` saves zones to `zones` table; site_config stores bounds/buildings only
 - Components: `SitePlan` accepts `zones` as a separate prop; `PropertyVisual` fetches from DB
-- Migration 030 written; **must be run in Supabase before testing Visual tab**
+- Migration 030 run in Supabase
+
+**C3 complete (2026-04-26):**
+- `GET /api/global-context/summary` — derived planning layer, no new DB tables
+- Financial rollup: global_commitments normalized to annual equivalent (by domain); Parcel project target_budget + actual_spend; quarterly_budget expense allocation for current year
+- Upcoming list: active/planned projects due in current or next quarter; one-time and quarterly commitments due in current or next quarter; sorted by year/quarter
+- Conflict signals: over-budget projects (actual_spend > target_budget); threshold violations (vs. global_context.thresholds keys)
+- Full TypeScript types inline; build and typecheck clean
 
 Outstanding deferred items:
 - zone_id/space_id assignment UI on projects/tasks/assets — FKs in place, UI deferred
