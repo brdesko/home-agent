@@ -1,6 +1,6 @@
 # Lattice Product Plan
 
-Living document. Updated for the transition from Parcel-as-product to Lattice-as-product. Last touched: 2026-04-22.
+Living document. Updated for the transition from Parcel-as-product to Lattice-as-product. Last touched: 2026-04-24.
 
 ---
 
@@ -48,20 +48,19 @@ This product has already proven that the concept is valuable in real use. See pr
 
 ### Known reality
 
-Before the broader Workspace vision can be layered on cleanly, Parcel needs a stabilization pass.
+Phases A and B are complete. Parcel has been stabilized, hardened, and given a QA backbone. A substantial refinement pass (visual system, room tracking, agent tool improvements, UI polish) was completed as bridging work between stabilization and Lattice development.
 
-Known concerns include:
-- user-reported defects still needing triage and resolution
-- agent route monolith needing modularization
-- missing or thin automated test coverage
-- need for stronger observability and QA cadence
-- need for guardrails around future autonomous behavior
+Outstanding Parcel items are tracked as deferred WARNs:
+- Hardcoded owner names in welcome page and system prompt — Phase E (multi-tenancy)
+- Visual tab continual improvement — parked, revisit when Lattice is stable
+
+The architecture is ready for the Lattice workspace layer to be built above it.
 
 ---
 
 ## Roadmap overview
 
-### Phase A — Parcel Stabilization & Hardening (active)
+### Phase A — Parcel Stabilization & Hardening (complete)
 
 Objective:
 Make Parcel reliable, reviewable, and easier to evolve before adding major new architecture.
@@ -98,7 +97,7 @@ The fastest path to a strong Workspace is to stabilize the mature domain first r
 
 ---
 
-### Phase B — QA Foundation
+### Phase B — QA Foundation (complete)
 
 Objective:
 Create a real QA backbone before introducing admin-agent-led product evolution.
@@ -139,15 +138,60 @@ Checks should include:
 
 ---
 
-### Phase C — Admin Agent Foundation
+### Phase C — Lattice/Workspace Core Architecture (active)
 
 Objective:
-Introduce the internal team: PM Agent and QA Agent, but only on top of a stable enough base.
+Build the Lattice layer above Parcel — workspace entity, shared Global Context, and the structural foundation that all domains and admin systems will build on.
 
 Why now:
-These agents should accelerate the product, not compensate for missing fundamentals.
+Admin agents belong at the Lattice layer, not inside Parcel. Building the workspace first means every subsequent layer — agents, Personal domain, autonomy expansion — lands in the right place from the start.
 
-#### C1. Product Manager Agent v1
+#### C1. Introduce Workspace as top-level unit
+- define Workspace entity and membership semantics
+- preserve full compatibility with existing Parcel/property structures
+- model primary owner plus optional collaborators
+- Parcel becomes a domain within the Workspace, not a standalone product
+
+#### C2. Introduce Global Context foundation
+Build the first version of the shared cross-domain layer.
+
+Initial editable core:
+- major goals and strategic priorities
+- planning assumptions and risk preferences
+- major financial commitments
+- thresholds / spending targets
+
+Initial derived layer:
+- budget rollups across domains
+- conflict detection between commitments
+- planning and risk flags
+- upcoming pressure points
+
+#### C3. Shared planning model
+- define how domains publish into finances, time, and goal systems
+- avoid duplicating cross-domain planning structures inside individual domains
+
+#### C4. Lattice shell and navigation
+- top-level product navigation (Workspace switcher, domain switcher)
+- Lattice home / Global Context view
+- visual identity and information architecture that reflects the full product, not just Parcel
+
+**Exit criteria:**
+- Workspace exists conceptually and technically above Parcel
+- Global Context can support cross-domain reasoning in a real, not hand-wavy, way
+- the product feels like Lattice with Parcel inside it, not Parcel with extra tabs
+
+---
+
+### Phase D — Admin Agents + Panel (Lattice-layer)
+
+Objective:
+Introduce the internal team — PM Agent, QA Agent, and admin dashboard — built as Lattice-level infrastructure, not domain-level tooling.
+
+Why here:
+Admin agents need visibility across the full system to be useful. Building them before the Lattice layer exists would mean building them in the wrong place. They belong above domains, not inside one.
+
+#### D1. Product Manager Agent v1
 Responsibilities:
 - read vision, constraints, roadmap, session notes, and QA reports
 - identify gaps, debt, opportunities, and sequencing risks
@@ -156,88 +200,26 @@ Responsibilities:
 - challenge decisions that optimize too narrowly for current use if broader value is being lost
 - recommend cost-conscious model routing and workflow improvements
 
-#### C2. QA Agent v1
+#### D2. QA Agent v1
 Responsibilities:
-- run or coordinate fast review mode
-- summarize regressions and trust issues
-- recommend targeted fixes
-- escalate risks clearly
+- run or coordinate fast review mode (already exists as /qa slash command)
+- run deeper product-quality reviews
+- summarize regressions and trust issues across the full system
+- recommend targeted fixes and escalate risks clearly
 
-#### C3. Admin dashboard foundation
-- create a simple internal admin surface for invoking PM and QA workflows
-- keep this operational and plain rather than over-designed
-- clearly separate internal admin functions from user-facing product features
+#### D3. Admin dashboard foundation
+- simple internal surface for invoking PM and QA workflows
+- owner-only, clearly separated from user-facing product
+- plain and operational, not over-designed
 
 **Exit criteria:**
 - PM Agent produces useful prioritization rather than generic advice
-- QA Agent helps surface real regressions efficiently
-- owner can use both as an internal team without ambiguity
+- QA Agent helps surface real regressions across domains efficiently
+- owner can use both as an internal team with clear authority and boundaries
 
 ---
 
-### Phase D — Parcel Refinement with Admin-Agent Support
-
-Objective:
-Use the new internal team to speed up remaining Parcel polish and reliability work.
-
-#### D1. Parking lot review
-- review existing Parcel parking lot items
-- re-rank by user value, trust impact, and architectural leverage
-
-#### D2. Product and UX refinement
-- improve maneuverability, rough edges, and trust-building interactions
-- ensure Parcel is pleasant to use repeatedly, not just functional
-
-#### D3. Agent workflow refinement
-- improve property-agent prompts, tools, review patterns, and failure handling
-- reduce long loops and improve model-cost efficiency
-
-**Exit criteria:**
-- Parcel feels polished enough to be shown proudly and used regularly
-- outstanding debt is visible and intentionally ranked
-
----
-
-### Phase E — Workspace Core Architecture
-
-Objective:
-Lift the product from Parcel-centric to true Workspace architecture.
-
-Why here:
-Do this only after Parcel is stable enough that the architectural move can be made intentionally.
-
-#### E1. Introduce Workspace as top-level unit
-- define Workspace entity and membership semantics
-- preserve compatibility with existing Parcel/property structures
-- model primary owner plus optional collaborators
-
-#### E2. Introduce Global Context foundation
-Build the first version of the shared cross-domain layer.
-
-Initial editable core:
-- major goals
-- strategic priorities
-- planning assumptions
-- thresholds / preferences
-- major commitments
-
-Initial derived layer:
-- budget rollups
-- conflict detection
-- planning and risk flags
-- upcoming pressure points
-
-#### E3. Shared planning model
-- define how domains publish into finances, time, and goal systems
-- avoid duplicating cross-domain planning structures inside domains
-
-**Exit criteria:**
-- Workspace exists conceptually and technically above Parcel
-- Global Context can support cross-domain reasoning in a real, not hand-wavy, way
-
----
-
-### Phase F — Personal Domain v1
+### Phase E — Personal Domain v1
 
 Objective:
 Launch the first non-Parcel domain inside the Workspace.
@@ -270,7 +252,7 @@ Examples of intended value:
 
 ---
 
-### Phase G — Controlled Autonomy Expansion
+### Phase F — Controlled Autonomy Expansion
 
 Objective:
 Increase system self-support within explicit trust boundaries.
@@ -297,7 +279,7 @@ Allow agents to act with less friction in approved low-risk zones such as:
 
 ---
 
-### Phase H — Broader Domain Expansion and Optional Market Lens
+### Phase G — Broader Domain Expansion and Optional Market Lens
 
 Objective:
 Expand only where value is real and architecture is ready.
@@ -426,3 +408,4 @@ These should remain visible as the product evolves:
 - **2026-04-21:** Automated QA to be implemented as GitHub Actions scheduled workflow, not Claude Code session cron.
 - **2026-04-21:** PM Agent and QA Agent scoped to Phase C; evolution charter to be written collaboratively.
 - **2026-04-22:** Product expanded to "Lattice" — Parcel becomes a domain within a broader Life OS. CLAUDE.md and PLAN.md replaced with Lattice versions. Active work: Phase A (Parcel stabilization).
+- **2026-04-24:** Roadmap resequenced. Admin agents moved to after Lattice framework (Phase D, not Phase C). Rationale: admin agents belong at the Lattice layer — building them before the workspace exists would put them in the wrong place. New active phase: C (Lattice/Workspace Core Architecture).
