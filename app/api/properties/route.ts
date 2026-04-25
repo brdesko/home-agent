@@ -17,9 +17,29 @@ export async function POST(req: NextRequest) {
   // Use admin client for writes — RLS bootstrap problem (no membership exists yet)
   const admin = createAdminClient()
 
+  // Ensure the user has a Lattice; create one if this is their first property
+  const { data: existingLattice } = await admin
+    .from('lattices')
+    .select('id')
+    .eq('owner_id', user.id)
+    .single()
+
+  let latticeId = existingLattice?.id ?? null
+
+  if (!latticeId) {
+    const { data: lattice, error: latticeErr } = await admin
+      .from('lattices')
+      .insert({ owner_id: user.id, name: 'Home' })
+      .select('id')
+      .single()
+
+    if (latticeErr) return NextResponse.json({ error: latticeErr.message }, { status: 500 })
+    latticeId = lattice.id
+  }
+
   const { data: property, error: propErr } = await admin
     .from('properties')
-    .insert({ name, address })
+    .insert({ name, address, lattice_id: latticeId })
     .select('id, name, address')
     .single()
 

@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const VALID_ROLES = ['owner', 'viewer']
+const VALID_ROLES = ['owner', 'member']
 
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { email, property_id, role = 'viewer' } = await request.json()
+  const { email, property_id, role = 'member' } = await request.json()
   if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 })
   if (!VALID_ROLES.includes(role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
 
