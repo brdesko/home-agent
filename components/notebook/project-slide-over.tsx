@@ -354,7 +354,9 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
               <div className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">Tasks</h3>
                 {project.tasks.length === 0 ? (
-                  <p className="text-xs text-zinc-400 italic">No tasks yet — ask the Agent or add one directly.</p>
+                  <div className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50 px-4 py-5 text-center">
+                    <p className="text-xs text-zinc-400">No tasks yet — ask the Agent or add one directly.</p>
+                  </div>
                 ) : (
                   <TaskList tasks={project.tasks} projectName={project.name} projectId={project.id} />
                 )}
@@ -559,7 +561,9 @@ export function ProjectSlideOver({ project, goals, allProjects, isOwner, onClose
                     ))}
 
                     {lines.length === 0 && !newLine && (
-                      <p className="text-xs text-zinc-400 py-1 italic">No line items yet.</p>
+                      <div className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50 px-4 py-4 text-center">
+                        <p className="text-xs text-zinc-400">No line items yet — add an estimated or actual cost above.</p>
+                      </div>
                     )}
 
                     {/* Totals row */}

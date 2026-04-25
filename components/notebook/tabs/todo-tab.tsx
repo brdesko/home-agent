@@ -130,17 +130,13 @@ const SAGE = 'oklch(0.50 0.10 155)'
 function TaskRow({
   task,
   project,
-  goals,
   isOwner,
-  allProjects,
   onSelectProject,
   onSuggestionSaved,
 }: {
   task: UnifiedTask
   project: ProjectRow | null
-  goals: Goal[]
   isOwner: boolean
-  allProjects: ProjectRow[]
   onSelectProject: (p: ProjectRow) => void
   onSuggestionSaved?: (taskId: string) => void
 }) {
@@ -241,7 +237,7 @@ function TaskRow({
           {task.due_date && (
             <span className="text-xs text-zinc-400 shrink-0">{shortDate(task.due_date)}</span>
           )}
-          <span className={`text-zinc-300 text-xs shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}>▼</span>
+          <span className={`text-zinc-300 text-xs shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>▼</span>
         </button>
       </div>
 
@@ -447,8 +443,6 @@ export function TodoTab({ projects, goals, ongoingTasks, isOwner }: Props) {
       ).length
     : 0
 
-  const [savedSuggestionIds, setSavedSuggestionIds] = useState<Set<string>>(new Set())
-
   function renderTask(t: UnifiedTask) {
     const project = t.projectId ? projects.find(p => p.id === t.projectId) ?? null : null
     return (
@@ -456,11 +450,8 @@ export function TodoTab({ projects, goals, ongoingTasks, isOwner }: Props) {
         key={t.id}
         task={t}
         project={project}
-        goals={goals}
         isOwner={isOwner}
-        allProjects={projects}
         onSelectProject={setSelectedProject}
-        onSuggestionSaved={(id) => setSavedSuggestionIds(prev => new Set([...prev, id]))}
       />
     )
   }
@@ -490,7 +481,11 @@ export function TodoTab({ projects, goals, ongoingTasks, isOwner }: Props) {
 
         {/* Loading state for suggestions */}
         {loadingSuggestions && (
-          <p className="text-sm text-zinc-400 animate-pulse">Checking the forecast…</p>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 space-y-2 animate-pulse">
+            <div className="h-3 w-32 rounded bg-zinc-200" />
+            <div className="h-3 w-48 rounded bg-zinc-200" />
+            <div className="h-3 w-40 rounded bg-zinc-200" />
+          </div>
         )}
 
         {/* Suggestions error */}
