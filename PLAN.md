@@ -50,7 +50,7 @@ This product has already proven that the concept is valuable in real use. See pr
 
 Phases A and B are complete. Parcel has been stabilized, hardened, and given a QA backbone. A substantial refinement pass (visual system, room tracking, agent tool improvements, UI polish) was completed as bridging work between stabilization and Lattice development.
 
-Phase C is active. C1 is complete.
+Phase C is active. C1 and C2 are complete.
 
 **C1 complete (2026-04-25):**
 - `lattices` table introduced (1:1 with user, owner_id unique)
@@ -58,7 +58,7 @@ Phase C is active. C1 is complete.
 - `member_role.viewer` renamed to `member_role.member`
 - `lib/get-lattice-id.ts` added
 - Properties POST auto-creates Lattice on first property creation
-- Migration 028 written; must be run in Supabase
+- Migration 028 run in Supabase
 
 **Lattice user model (locked 2026-04-25):**
 - Lattice is strictly 1:1 with a user — private, not shared
@@ -66,12 +66,26 @@ Phase C is active. C1 is complete.
 - Parcel members go directly to the Parcel on login; they do not see the owner's Lattice
 - Parcel members may also have their own Lattice independently
 
-Outstanding Parcel items are tracked as deferred WARNs:
+**C2 complete (2026-04-25):**
+- `global_context` table: one row per Lattice (upserted), JSONB fields for goals, planning_assumptions, risk_preferences, thresholds
+- `global_commitments` table: structured rows with recurrence_type (one_time/annual/monthly/quarterly), domain check constraint (parcel/personal/null), target_year/quarter, owner-only RLS
+- API routes: GET/PATCH /api/global-context, GET/POST /api/global-commitments, PATCH/DELETE /api/global-commitments/[id]
+- Migration 029 run in Supabase
+
+**Zone/Space model (locked 2026-04-25 — Parcel Z, builds after C2):**
+- "Rooms" concept renamed to "Spaces" (UI and eventual DB rename)
+- Zones become a proper DB table (currently JSONB in site_config) — required for FK linkage
+- Projects, tasks, assets, and ongoing tasks all get nullable zone_id + space_id FKs
+- Project linkage is hierarchical: pinned to Space, Zone, or Property
+- Completion % is bottom-up only: space items → zone %, zone items → property %; property-level items do not pull down zone/space %
+- OngoingTask gets an `ongoing_task_instances` table (one row per task per year) for annual cycle tracking; tasks only count toward completion % when in their active window
+
+Outstanding Parcel items tracked as deferred WARNs:
 - Hardcoded owner names in welcome page and system prompt — Phase E (multi-tenancy)
 - Visual tab continual improvement — parked, revisit when Lattice is stable
 - Existing production properties have `lattice_id = null` — Brady's Lattice auto-creates on next property creation, or C4 shell handles bootstrap
 
-**C2 next:** Global Context data model — `global_context` and `global_commitments` tables, API routes.
+**Parcel Z next (before C3):** Zone-to-table migration, spaces rename, zone_id/space_id linkage on projects/tasks/assets/ongoing tasks, ongoing_task_instances table.
 
 ---
 
