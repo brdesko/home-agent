@@ -14,21 +14,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json()
 
   const updates: Record<string, unknown> = {}
-  if (body.name       !== undefined) updates.name       = body.name
-  if (body.status     !== undefined) updates.status     = body.status
-  if (body.notes      !== undefined) updates.notes      = body.notes
-  if (body.sort_order !== undefined) updates.sort_order = body.sort_order
-  if (body.pos_x      !== undefined) updates.pos_x      = body.pos_x
-  if (body.pos_y      !== undefined) updates.pos_y      = body.pos_y
-  if (body.pos_w      !== undefined) updates.pos_w      = body.pos_w
-  if (body.pos_h      !== undefined) updates.pos_h      = body.pos_h
+  if (body.name                 !== undefined) updates.name                 = body.name
+  if (body.color                !== undefined) updates.color                = body.color
+  if (body.x                    !== undefined) updates.x                    = body.x
+  if (body.y                    !== undefined) updates.y                    = body.y
+  if (body.width                !== undefined) updates.width                = body.width
+  if (body.height               !== undefined) updates.height               = body.height
+  if (body.description          !== undefined) updates.description          = body.description
+  if (body.floor_plan_photo_url !== undefined) updates.floor_plan_photo_url = body.floor_plan_photo_url
+  if (body.sort_order           !== undefined) updates.sort_order           = body.sort_order
 
   const { data, error } = await supabase
-    .from('rooms')
+    .from('zones')
     .update(updates)
     .eq('id', id)
     .eq('property_id', propertyId)
-    .select('id, zone_id, name, status, notes, sort_order, pos_x, pos_y, pos_w, pos_h')
+    .select('id, name, color, x, y, width, height, description, floor_plan_photo_url, sort_order')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -47,7 +48,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params
 
   const { error } = await supabase
-    .from('rooms')
+    .from('zones')
     .delete()
     .eq('id', id)
     .eq('property_id', propertyId)

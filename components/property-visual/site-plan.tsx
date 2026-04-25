@@ -26,7 +26,6 @@ export type Building = {
 
 export type SiteConfig = {
   bounds?: { width: number; height: number }
-  zones: Zone[]
   buildings?: Building[]
 }
 
@@ -34,10 +33,12 @@ const GRID_STEP = 10
 
 export function SitePlan({
   config,
+  zones,
   activeZoneId,
   onZoneClick,
 }: {
   config: SiteConfig
+  zones: Zone[]
   activeZoneId: string | null
   onZoneClick: (id: string) => void
 }) {
@@ -75,7 +76,7 @@ export function SitePlan({
           {hLines.map(y => <line key={`h${y}`} x1={0} y1={y} x2={W} y2={y} stroke="#1a2d40" strokeWidth="0.12" />)}
 
           {/* Zone overlays */}
-          {config.zones.map(zone => {
+          {zones.map(zone => {
             const active = activeZoneId === zone.id
             return (
               <g

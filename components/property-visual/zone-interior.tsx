@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export type Room = {
+export type Space = {
   id: string
   zone_id: string
   name: string
@@ -21,16 +21,16 @@ const STATUS_META = {
   complete:    { bg: '#052e16', border: '#14532d', text: '#4ade80', dot: '#22c55e', label: 'Complete'    },
 }
 
-const STATUS_ORDER: Room['status'][] = ['not_started', 'in_progress', 'complete']
+const STATUS_ORDER: Space['status'][] = ['not_started', 'in_progress', 'complete']
 
-function RoomTile({ room, isOwner, onStatusChange, onDelete }: {
-  room: Room
+function SpaceTile({ space, isOwner, onStatusChange, onDelete }: {
+  space: Space
   isOwner: boolean
-  onStatusChange: (id: string, status: Room['status']) => void
+  onStatusChange: (id: string, status: Space['status']) => void
   onDelete: (id: string) => void
 }) {
-  const m = STATUS_META[room.status]
-  const next = STATUS_ORDER[(STATUS_ORDER.indexOf(room.status) + 1) % 3]
+  const m = STATUS_META[space.status]
+  const next = STATUS_ORDER[(STATUS_ORDER.indexOf(space.status) + 1) % 3]
 
   return (
     <div
@@ -38,19 +38,19 @@ function RoomTile({ room, isOwner, onStatusChange, onDelete }: {
       style={{ backgroundColor: m.bg, borderColor: m.border }}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-sm font-medium text-white leading-snug">{room.name}</span>
+        <span className="text-sm font-medium text-white leading-snug">{space.name}</span>
         {isOwner && (
           <button
-            onClick={() => onDelete(room.id)}
+            onClick={() => onDelete(space.id)}
             className="text-zinc-600 hover:text-red-400 transition-colors text-xs shrink-0 mt-0.5"
-            title="Remove room"
+            title="Remove space"
           >✕</button>
         )}
       </div>
 
       {isOwner ? (
         <button
-          onClick={() => onStatusChange(room.id, next)}
+          onClick={() => onStatusChange(space.id, next)}
           title="Click to advance status"
           className="inline-flex items-center gap-1.5 text-xs rounded-full border px-2 py-0.5 transition-colors hover:opacity-80"
           style={{ color: m.text, borderColor: m.border }}
@@ -65,8 +65,8 @@ function RoomTile({ room, isOwner, onStatusChange, onDelete }: {
         </div>
       )}
 
-      {room.notes && (
-        <p className="text-xs leading-relaxed" style={{ color: m.text, opacity: 0.75 }}>{room.notes}</p>
+      {space.notes && (
+        <p className="text-xs leading-relaxed" style={{ color: m.text, opacity: 0.75 }}>{space.notes}</p>
       )}
     </div>
   )
@@ -76,16 +76,16 @@ export function ZoneInterior({
   zoneId,
   zoneName,
   zoneColor,
-  rooms,
+  spaces,
   isOwner,
-  onRoomsChange,
+  onSpacesChange,
 }: {
   zoneId: string
   zoneName: string
   zoneColor: string
-  rooms: Room[]
+  spaces: Space[]
   isOwner: boolean
-  onRoomsChange: (rooms: Room[]) => void
+  onSpacesChange: (spaces: Space[]) => void
 }) {
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
@@ -96,41 +96,41 @@ export function ZoneInterior({
     if (!newName.trim()) return
     setSaving(true); setErr(null)
     try {
-      const res = await fetch('/api/rooms', {
+      const res = await fetch('/api/spaces', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ zone_id: zoneId, name: newName.trim() }),
       })
       if (res.ok) {
-        const room = await res.json() as Room
-        onRoomsChange([...rooms, room])
+        const space = await res.json() as Space
+        onSpacesChange([...spaces, space])
         setNewName('')
         setAdding(false)
       } else {
         const d = await res.json()
-        setErr(d.error ?? 'Failed to add room')
+        setErr(d.error ?? 'Failed to add space')
       }
     } catch { setErr('Network error') } finally { setSaving(false) }
   }
 
-  async function handleStatusChange(id: string, status: Room['status']) {
-    const res = await fetch(`/api/rooms/${id}`, {
+  async function handleStatusChange(id: string, status: Space['status']) {
+    const res = await fetch(`/api/spaces/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     })
-    if (res.ok) onRoomsChange(rooms.map(r => r.id === id ? { ...r, status } : r))
+    if (res.ok) onSpacesChange(spaces.map(s => s.id === id ? { ...s, status } : s))
   }
 
   async function handleDelete(id: string) {
-    const res = await fetch(`/api/rooms/${id}`, { method: 'DELETE' })
-    if (res.ok) onRoomsChange(rooms.filter(r => r.id !== id))
+    const res = await fetch(`/api/spaces/${id}`, { method: 'DELETE' })
+    if (res.ok) onSpacesChange(spaces.filter(s => s.id !== id))
   }
 
   const statusCounts = {
-    not_started: rooms.filter(r => r.status === 'not_started').length,
-    in_progress: rooms.filter(r => r.status === 'in_progress').length,
-    complete:    rooms.filter(r => r.status === 'complete').length,
+    not_started: spaces.filter(s => s.status === 'not_started').length,
+    in_progress: spaces.filter(s => s.status === 'in_progress').length,
+    complete:    spaces.filter(s => s.status === 'complete').length,
   }
 
   return (
@@ -142,7 +142,7 @@ export function ZoneInterior({
           <h2 className="text-sm font-semibold text-zinc-200">{zoneName}</h2>
         </div>
 
-        {rooms.length > 0 && (
+        {spaces.length > 0 && (
           <div className="flex gap-2 text-xs">
             {statusCounts.complete > 0 && (
               <span className="text-emerald-500">{statusCounts.complete} done</span>
@@ -157,17 +157,17 @@ export function ZoneInterior({
         )}
       </div>
 
-      {/* Rooms */}
-      {rooms.length === 0 && !adding ? (
+      {/* Spaces */}
+      {spaces.length === 0 && !adding ? (
         <p className="text-xs text-zinc-600 leading-relaxed">
-          {isOwner ? 'No rooms yet. Add rooms to track interior progress.' : 'No rooms defined for this zone.'}
+          {isOwner ? 'No spaces yet. Add spaces to track interior progress.' : 'No spaces defined for this zone.'}
         </p>
       ) : (
         <div className="space-y-2">
-          {rooms.map(room => (
-            <RoomTile
-              key={room.id}
-              room={room}
+          {spaces.map(space => (
+            <SpaceTile
+              key={space.id}
+              space={space}
               isOwner={isOwner}
               onStatusChange={handleStatusChange}
               onDelete={handleDelete}
@@ -176,7 +176,7 @@ export function ZoneInterior({
         </div>
       )}
 
-      {/* Add room form */}
+      {/* Add space form */}
       {isOwner && (
         adding ? (
           <div className="space-y-2">
@@ -188,7 +188,7 @@ export function ZoneInterior({
                 if (e.key === 'Enter') handleAdd()
                 if (e.key === 'Escape') { setAdding(false); setNewName('') }
               }}
-              placeholder="Room name"
+              placeholder="Space name"
               className="w-full text-xs bg-zinc-800/80 border border-zinc-700 rounded-md px-2.5 py-1.5 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
             />
             {err && <p className="text-xs text-red-400">{err}</p>}
@@ -213,7 +213,7 @@ export function ZoneInterior({
             onClick={() => setAdding(true)}
             className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors text-left"
           >
-            + Add room
+            + Add space
           </button>
         )
       )}

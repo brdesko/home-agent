@@ -330,7 +330,7 @@ export const tools: Anthropic.Tool[] = [
 
   {
     name: 'derive_visual_from_photo',
-    description: 'Analyses a property photo to derive a 2D site plan layout. Pass an aerial or overhead photo URL (get it from get_property_photos). This will generate zone positions and building footprints and save them as the property visual config. Best results with satellite, drone, or overhead photos.',
+    description: 'Analyses a property photo to derive a 2D site plan. Pass an aerial or overhead photo URL (get it from get_property_photos). Saves derived zones to the zones table and building footprints to the visual config. Best results with satellite, drone, or overhead photos.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -343,13 +343,13 @@ export const tools: Anthropic.Tool[] = [
 
   {
     name: 'update_visual_config',
-    description: 'Saves or updates the property 2D site plan config directly. Use this to refine zone positions after the user gives feedback ("move the barn further west", "the driveway is wrong"). Coordinate space: 0–100 wide × 0–80 tall.',
+    description: 'Saves or updates the property site plan bounds and building footprints. Use this to refine the coordinate space or building positions. To move or resize zones, use manage_zone instead. Coordinate space: 0–100 wide × 0–80 tall.',
     input_schema: {
       type: 'object' as const,
       properties: {
         site_config: {
           type: 'object' as const,
-          description: 'Full site config: { bounds?: { width, height }, zones: [{ id, name, color, x, y, width, height, description? }], buildings?: [{ id, label?, x, y, width, height, color? }] }',
+          description: 'Site config shape: { bounds?: { width, height }, buildings?: [{ id, label?, x, y, width, height, color? }] }. Do not include zones here — use manage_zone for zone edits.',
         },
         config_notes: { type: 'string', description: 'Optional note about what changed' },
       },
@@ -358,31 +358,62 @@ export const tools: Anthropic.Tool[] = [
   },
 
   {
-    name: 'get_rooms',
-    description: 'Returns rooms for this property. Filter by zone_id to see rooms in one zone. Use before manage_room to see existing room IDs.',
+    name: 'get_zones',
+    description: 'Returns all zones for this property from the database. Each zone has a UUID id, name, color, x/y/width/height position, and optional description. Call this before manage_zone to get zone IDs.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: [],
+    },
+  },
+
+  {
+    name: 'manage_zone',
+    description: 'Creates, updates, or deletes a zone on the site plan. Zones are stored in the database. Use update to adjust position or appearance after user feedback ("move the barn further west"). Call get_zones first to get IDs for update/delete.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        zone_id: { type: 'string', description: 'Filter to a specific zone (e.g. "house", "barn"). Omit for all zones.' },
+        action:      { type: 'string', enum: ['create', 'update', 'delete'] },
+        zone_id:     { type: 'string', description: 'UUID of the zone — required for update and delete (get from get_zones)' },
+        name:        { type: 'string', description: 'Zone display name (create/update)' },
+        color:       { type: 'string', description: 'Hex color for the zone overlay (create/update)' },
+        x:           { type: 'number', description: 'X position in coordinate space 0–100 (create/update)' },
+        y:           { type: 'number', description: 'Y position in coordinate space 0–80 (create/update)' },
+        width:       { type: 'number', description: 'Width in coordinate space (create/update)' },
+        height:      { type: 'number', description: 'Height in coordinate space (create/update)' },
+        description: { type: 'string', description: 'Short description of the zone (create/update)' },
+        sort_order:  { type: 'number', description: 'Display order in the zone list (create/update)' },
+      },
+      required: ['action'],
+    },
+  },
+
+  {
+    name: 'get_spaces',
+    description: 'Returns spaces (interior areas) for this property. Filter by zone_id (UUID) to see spaces in one zone. Use before manage_space to get space IDs.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        zone_id: { type: 'string', description: 'UUID of the zone to filter by. Omit for all zones.' },
       },
       required: [],
     },
   },
 
   {
-    name: 'manage_room',
-    description: 'Creates, updates, or deletes a room within a zone. Use create after floor plan analysis. Use update to change status or notes. Call get_rooms first to get IDs for update/delete.',
+    name: 'manage_space',
+    description: 'Creates, updates, or deletes a space within a zone. Spaces are interior areas like Kitchen, Living Room, or Primary Bedroom. Call get_spaces first to get IDs for update/delete.',
     input_schema: {
       type: 'object' as const,
       properties: {
         action:     { type: 'string', enum: ['create', 'update', 'delete'] },
-        zone_id:    { type: 'string', description: 'Required for create — which zone this room belongs to' },
-        room_id:    { type: 'string', description: 'Required for update and delete' },
-        name:       { type: 'string', description: 'Room name (create/update)' },
-        status:     { type: 'string', enum: ['not_started', 'in_progress', 'complete'], description: 'Room status (create/update)' },
+        zone_id:    { type: 'string', description: 'UUID of the zone — required for create (get from get_zones)' },
+        space_id:   { type: 'string', description: 'UUID of the space — required for update and delete' },
+        name:       { type: 'string', description: 'Space name (create/update)' },
+        status:     { type: 'string', enum: ['not_started', 'in_progress', 'complete'], description: 'Space status (create/update)' },
         notes:      { type: 'string', description: 'Optional notes (create/update)' },
         sort_order: { type: 'number', description: 'Display order (create/update)' },
-        pos_x: { type: 'number', description: 'X position 0–100 within zone floor plan (create/update, null = schematic tile)' },
+        pos_x: { type: 'number', description: 'X position 0–100 within zone floor plan (create/update, omit for schematic tile layout)' },
         pos_y: { type: 'number', description: 'Y position 0–100 within zone floor plan (create/update)' },
         pos_w: { type: 'number', description: 'Width 0–100 within zone floor plan (create/update)' },
         pos_h: { type: 'number', description: 'Height 0–100 within zone floor plan (create/update)' },

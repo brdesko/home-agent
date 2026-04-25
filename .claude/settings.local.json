@@ -27,7 +27,9 @@
       "Bash(sed -n '66,75p' components/notebook/goals-tab.tsx)",
       "Bash(sed -n '100,108p' components/notebook/goals-tab.tsx)",
       "Bash(sed -n '192,200p' components/notebook/tabs/overview-tab.tsx)",
-      "Bash(xargs ls *)"
+      "Bash(xargs ls *)",
+      "Bash(mkdir -p \"C:/Users/brdes/desktop/claude/home-agent/app/api/zones/[id]\")",
+      "Bash(mkdir -p \"C:/Users/brdes/desktop/claude/home-agent/app/api/spaces/[id]\")"
     ]
   },
   "enabledMcpjsonServers": [

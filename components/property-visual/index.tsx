@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import type { SiteConfig, Zone } from './site-plan'
-import type { Room } from './zone-interior'
+import type { Space } from './zone-interior'
 
 const SitePlan      = dynamic(() => import('./site-plan').then(m => ({ default: m.SitePlan })),      { ssr: false })
 const ZoneInterior  = dynamic(() => import('./zone-interior').then(m => ({ default: m.ZoneInterior })), { ssr: false })
@@ -34,7 +34,7 @@ function EmptyState() {
           </ol>
         </div>
         <p className="text-xs text-zinc-600">
-          Best results with overhead / satellite images. Ground-level photos work for interior room layouts.
+          Best results with overhead / satellite images. Ground-level photos work for interior space layouts.
         </p>
       </div>
     </div>
@@ -45,22 +45,25 @@ function EmptyState() {
 
 export function PropertyVisual({ isOwner }: { isOwner: boolean }) {
   const [config,       setConfig]       = useState<SiteConfig | null>(null)
-  const [rooms,        setRooms]        = useState<Room[]>([])
+  const [zones,        setZones]        = useState<Zone[]>([])
+  const [spaces,       setSpaces]       = useState<Space[]>([])
   const [loading,      setLoading]      = useState(true)
   const [activeZoneId, setActiveZoneId] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
       fetch('/api/visual-config').then(r => r.json()),
-      fetch('/api/rooms').then(r => r.json()),
-    ]).then(([cfg, roomData]) => {
+      fetch('/api/zones').then(r => r.json()),
+      fetch('/api/spaces').then(r => r.json()),
+    ]).then(([cfg, zoneData, spaceData]) => {
       if (cfg?.site_config) setConfig(cfg.site_config as SiteConfig)
-      setRooms(Array.isArray(roomData) ? roomData : [])
+      setZones(Array.isArray(zoneData)  ? zoneData  : [])
+      setSpaces(Array.isArray(spaceData) ? spaceData : [])
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
-  const activeZone   = config?.zones.find(z => z.id === activeZoneId) ?? null
-  const activeRooms  = activeZoneId ? rooms.filter(r => r.zone_id === activeZoneId) : []
+  const activeZone   = zones.find(z => z.id === activeZoneId) ?? null
+  const activeSpaces = activeZoneId ? spaces.filter(s => s.zone_id === activeZoneId) : []
 
   function handleZoneClick(id: string) {
     setActiveZoneId(prev => prev === id ? null : id)
@@ -77,7 +80,7 @@ export function PropertyVisual({ isOwner }: { isOwner: boolean }) {
     )
   }
 
-  const hasConfig = config && config.zones && config.zones.length > 0
+  const hasConfig = zones.length > 0
 
   return (
     <div className="flex gap-4" style={{ height: '72vh' }}>
@@ -89,19 +92,20 @@ export function PropertyVisual({ isOwner }: { isOwner: boolean }) {
         ) : activeZoneId && activeZone ? (
           <ZoneInteriorCanvas
             zone={activeZone}
-            rooms={activeRooms}
+            spaces={activeSpaces}
             isOwner={isOwner}
             onBack={() => setActiveZoneId(null)}
-            onRoomsChange={(updated) => {
-              setRooms(prev => [
-                ...prev.filter(r => r.zone_id !== activeZoneId),
+            onSpacesChange={(updated) => {
+              setSpaces(prev => [
+                ...prev.filter(s => s.zone_id !== activeZoneId),
                 ...updated,
               ])
             }}
           />
         ) : (
           <SitePlan
-            config={config}
+            config={config ?? {}}
+            zones={zones}
             activeZoneId={activeZoneId}
             onZoneClick={handleZoneClick}
           />
@@ -126,11 +130,11 @@ export function PropertyVisual({ isOwner }: { isOwner: boolean }) {
               zoneId={activeZoneId}
               zoneName={activeZone.name}
               zoneColor={activeZone.color}
-              rooms={activeRooms}
+              spaces={activeSpaces}
               isOwner={isOwner}
-              onRoomsChange={(updated) => {
-                setRooms(prev => [
-                  ...prev.filter(r => r.zone_id !== activeZoneId),
+              onSpacesChange={(updated) => {
+                setSpaces(prev => [
+                  ...prev.filter(s => s.zone_id !== activeZoneId),
                   ...updated,
                 ])
               }}
@@ -141,10 +145,10 @@ export function PropertyVisual({ isOwner }: { isOwner: boolean }) {
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-2">
               Property Zones
             </p>
-            {config.zones.map(z => {
-              const zoneRooms    = rooms.filter(r => r.zone_id === z.id)
-              const doneCount    = zoneRooms.filter(r => r.status === 'complete').length
-              const activeCount  = zoneRooms.filter(r => r.status === 'in_progress').length
+            {zones.map(z => {
+              const zoneSpaces  = spaces.filter(s => s.zone_id === z.id)
+              const doneCount   = zoneSpaces.filter(s => s.status === 'complete').length
+              const activeCount = zoneSpaces.filter(s => s.status === 'in_progress').length
 
               return (
                 <button
@@ -162,7 +166,7 @@ export function PropertyVisual({ isOwner }: { isOwner: boolean }) {
                     {activeCount > 0 && (
                       <span className="text-xs text-orange-400 shrink-0">{activeCount}</span>
                     )}
-                    {activeCount === 0 && doneCount > 0 && doneCount === zoneRooms.length && zoneRooms.length > 0 && (
+                    {activeCount === 0 && doneCount > 0 && doneCount === zoneSpaces.length && zoneSpaces.length > 0 && (
                       <span className="text-xs text-emerald-500 shrink-0">✓</span>
                     )}
                   </div>
@@ -188,12 +192,12 @@ export function PropertyVisual({ isOwner }: { isOwner: boolean }) {
 
 // ─── Zone interior canvas wrapper ─────────────────────────────────────────────
 
-function ZoneInteriorCanvas({ zone, rooms, isOwner, onBack, onRoomsChange }: {
+function ZoneInteriorCanvas({ zone, spaces, isOwner, onBack, onSpacesChange }: {
   zone: Zone
-  rooms: Room[]
+  spaces: Space[]
   isOwner: boolean
   onBack: () => void
-  onRoomsChange: (rooms: Room[]) => void
+  onSpacesChange: (spaces: Space[]) => void
 }) {
   return (
     <div className="h-full flex flex-col" style={{ background: '#0e1520' }}>
@@ -215,36 +219,36 @@ function ZoneInteriorCanvas({ zone, rooms, isOwner, onBack, onRoomsChange }: {
         )}
       </div>
 
-      {/* Room tiles */}
+      {/* Space tiles */}
       <div className="flex-1 overflow-y-auto p-5">
-        {rooms.length === 0 && !isOwner ? (
+        {spaces.length === 0 && !isOwner ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-xs text-zinc-600">No rooms defined for this zone.</p>
+            <p className="text-xs text-zinc-600">No spaces defined for this zone.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {rooms.map(room => {
+            {spaces.map(space => {
               const m = {
                 not_started: { bg: '#1e293b', border: '#334155', text: '#94a3b8', dot: '#475569', label: 'Not started' },
                 in_progress: { bg: '#431407', border: '#7c2d12', text: '#fb923c', dot: '#f97316', label: 'In progress' },
                 complete:    { bg: '#052e16', border: '#14532d', text: '#4ade80', dot: '#22c55e', label: 'Complete'    },
-              }[room.status]
-              const statuses: Room['status'][] = ['not_started', 'in_progress', 'complete']
-              const next = statuses[(statuses.indexOf(room.status) + 1) % 3]
+              }[space.status]
+              const statuses: Space['status'][] = ['not_started', 'in_progress', 'complete']
+              const next = statuses[(statuses.indexOf(space.status) + 1) % 3]
 
               return (
                 <div
-                  key={room.id}
+                  key={space.id}
                   className="rounded-xl border p-4 flex flex-col gap-2 transition-colors"
                   style={{ backgroundColor: m.bg, borderColor: m.border }}
                 >
                   <div className="flex items-start justify-between gap-1">
-                    <span className="text-sm font-medium text-white leading-snug">{room.name}</span>
+                    <span className="text-sm font-medium text-white leading-snug">{space.name}</span>
                     {isOwner && (
                       <button
                         onClick={async () => {
-                          const res = await fetch(`/api/rooms/${room.id}`, { method: 'DELETE' })
-                          if (res.ok) onRoomsChange(rooms.filter(r => r.id !== room.id))
+                          const res = await fetch(`/api/spaces/${space.id}`, { method: 'DELETE' })
+                          if (res.ok) onSpacesChange(spaces.filter(s => s.id !== space.id))
                         }}
                         className="text-zinc-700 hover:text-red-400 transition-colors text-xs shrink-0"
                       >✕</button>
@@ -253,12 +257,12 @@ function ZoneInteriorCanvas({ zone, rooms, isOwner, onBack, onRoomsChange }: {
                   {isOwner ? (
                     <button
                       onClick={async () => {
-                        const res = await fetch(`/api/rooms/${room.id}`, {
+                        const res = await fetch(`/api/spaces/${space.id}`, {
                           method: 'PATCH',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ status: next }),
                         })
-                        if (res.ok) onRoomsChange(rooms.map(r => r.id === room.id ? { ...r, status: next } : r))
+                        if (res.ok) onSpacesChange(spaces.map(s => s.id === space.id ? { ...s, status: next } : s))
                       }}
                       title="Click to advance status"
                       className="self-start inline-flex items-center gap-1.5 text-xs rounded-full border px-2.5 py-0.5 transition-colors hover:opacity-80"
@@ -273,13 +277,13 @@ function ZoneInteriorCanvas({ zone, rooms, isOwner, onBack, onRoomsChange }: {
                       {m.label}
                     </div>
                   )}
-                  {room.notes && <p className="text-xs leading-relaxed" style={{ color: m.text, opacity: 0.7 }}>{room.notes}</p>}
+                  {space.notes && <p className="text-xs leading-relaxed" style={{ color: m.text, opacity: 0.7 }}>{space.notes}</p>}
                 </div>
               )
             })}
 
-            {/* Add room tile */}
-            {isOwner && <AddRoomTile zoneId={zone.id} onAdded={r => onRoomsChange([...rooms, r])} />}
+            {/* Add space tile */}
+            {isOwner && <AddSpaceTile zoneId={zone.id} onAdded={s => onSpacesChange([...spaces, s])} />}
           </div>
         )}
       </div>
@@ -287,7 +291,7 @@ function ZoneInteriorCanvas({ zone, rooms, isOwner, onBack, onRoomsChange }: {
   )
 }
 
-function AddRoomTile({ zoneId, onAdded }: { zoneId: string; onAdded: (r: Room) => void }) {
+function AddSpaceTile({ zoneId, onAdded }: { zoneId: string; onAdded: (s: Space) => void }) {
   const [editing, setEditing] = useState(false)
   const [name,    setName]    = useState('')
   const [saving,  setSaving]  = useState(false)
@@ -296,12 +300,12 @@ function AddRoomTile({ zoneId, onAdded }: { zoneId: string; onAdded: (r: Room) =
     if (!name.trim()) return
     setSaving(true)
     try {
-      const res = await fetch('/api/rooms', {
+      const res = await fetch('/api/spaces', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ zone_id: zoneId, name: name.trim() }),
       })
-      if (res.ok) { onAdded(await res.json() as Room); setName(''); setEditing(false) }
+      if (res.ok) { onAdded(await res.json() as Space); setName(''); setEditing(false) }
     } finally { setSaving(false) }
   }
 
@@ -311,7 +315,7 @@ function AddRoomTile({ zoneId, onAdded }: { zoneId: string; onAdded: (r: Room) =
         onClick={() => setEditing(true)}
         className="rounded-xl border border-dashed border-zinc-700 p-4 flex items-center justify-center text-xs text-zinc-600 hover:border-zinc-500 hover:text-zinc-400 transition-colors"
       >
-        + Add room
+        + Add space
       </button>
     )
   }
@@ -323,7 +327,7 @@ function AddRoomTile({ zoneId, onAdded }: { zoneId: string; onAdded: (r: Room) =
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setEditing(false); setName('') } }}
-        placeholder="Room name"
+        placeholder="Space name"
         className="w-full text-xs bg-zinc-900/60 border border-zinc-700 rounded-md px-2.5 py-1.5 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
       />
       <div className="flex gap-2">

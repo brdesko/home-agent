@@ -467,7 +467,7 @@ Identify all major zones and structures visible. Return ONLY valid JSON with no 
 {
   "bounds": { "width": 100, "height": 80 },
   "zones": [
-    { "id": "house", "name": "House & Gardens", "color": "#4ade80", "x": 10, "y": 5, "width": 40, "height": 35, "description": "Main residence and gardens" }
+    { "name": "House & Gardens", "color": "#4ade80", "x": 10, "y": 5, "width": 40, "height": 35, "description": "Main residence and gardens" }
   ],
   "buildings": [
     { "id": "main_house", "label": "House", "x": 15, "y": 8, "width": 18, "height": 22, "color": "#8ba3b8" }
@@ -478,7 +478,8 @@ Rules:
 - Coordinate space is 0–100 wide × 0–80 tall. Position everything proportionally.
 - Zones are large named areas (house zone, barn zone, pasture, pool, drive, etc.)
 - Buildings are actual structures within zones
-- Use clear, lowercase IDs: house, barn, pool, pasture, woodland, drive, garage, shed, etc.
+- Zones do NOT need an id field — they will receive database UUIDs automatically
+- Buildings need a unique id string (used as a key within the JSON)
 - Use visually distinct, muted hex colors for zones
 - Include 2–8 zones based on what you see
 - Top of image is typically north
@@ -502,20 +503,46 @@ Rules:
         .map(b => b.text).join('').trim()
 
       // Extract JSON
-      let site_config: unknown = null
-      try { site_config = JSON.parse(raw) } catch {
+      let parsed: { bounds?: { width: number; height: number }; zones?: unknown[]; buildings?: unknown[] } | null = null
+      try { parsed = JSON.parse(raw) } catch {
         const m = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
-        if (m) try { site_config = JSON.parse(m[1].trim()) } catch { /* */ }
-        if (!site_config) {
+        if (m) try { parsed = JSON.parse(m[1].trim()) } catch { /* */ }
+        if (!parsed) {
           const s = raw.indexOf('{'), e = raw.lastIndexOf('}')
-          if (s !== -1 && e > s) try { site_config = JSON.parse(raw.slice(s, e + 1)) } catch { /* */ }
+          if (s !== -1 && e > s) try { parsed = JSON.parse(raw.slice(s, e + 1)) } catch { /* */ }
         }
       }
 
-      if (!site_config) {
+      if (!parsed) {
         return { type: 'tool_result', tool_use_id: id, content: 'Could not parse a valid site config from the photo. Try a clearer overhead or aerial image.', is_error: true }
       }
 
+      // Save zones to the zones table (replace any existing zones for this property)
+      const { error: delErr } = await supabase.from('zones').delete().eq('property_id', PROPERTY_ID)
+      if (delErr) return { type: 'tool_result', tool_use_id: id, content: `Failed to clear existing zones: ${delErr.message}`, is_error: true }
+
+      const derivedZones = Array.isArray(parsed.zones) ? parsed.zones : []
+      if (derivedZones.length > 0) {
+        const zoneRows = derivedZones.map((z: unknown, i: number) => {
+          const zone = z as Record<string, unknown>
+          return {
+            property_id:  PROPERTY_ID,
+            name:         String(zone.name  ?? 'Zone'),
+            color:        String(zone.color ?? '#94a3b8'),
+            x:            Number(zone.x     ?? 0),
+            y:            Number(zone.y     ?? 0),
+            width:        Number(zone.width ?? 20),
+            height:       Number(zone.height ?? 20),
+            description:  zone.description ? String(zone.description) : null,
+            sort_order:   i,
+          }
+        })
+        const { error: insertErr } = await supabase.from('zones').insert(zoneRows)
+        if (insertErr) return { type: 'tool_result', tool_use_id: id, content: `Derived config but failed to save zones: ${insertErr.message}`, is_error: true }
+      }
+
+      // Save site_config with bounds + buildings only (zones live in the zones table)
+      const site_config = { bounds: parsed.bounds, buildings: parsed.buildings ?? [] }
       const { error: saveErr } = await supabase
         .from('property_visual_config')
         .upsert(
@@ -526,7 +553,7 @@ Rules:
       if (saveErr) return { type: 'tool_result', tool_use_id: id, content: `Derived config but failed to save: ${saveErr.message}`, is_error: true }
 
       changes.push({ type: 'project_updated', summary: 'Derived and saved property site plan from photo' })
-      return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, site_config }) }
+      return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, zone_count: derivedZones.length, site_config }) }
     } catch (e) {
       return { type: 'tool_result', tool_use_id: id, content: `Error analysing photo: ${String(e)}`, is_error: true }
     }
@@ -548,12 +575,98 @@ Rules:
     return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true }) }
   }
 
-  // ── get_rooms ────────────────────────────────────────────────────────────────
-  if (block.name === 'get_rooms') {
+  // ── get_zones ────────────────────────────────────────────────────────────────
+  if (block.name === 'get_zones') {
+    const { data, error } = await supabase
+      .from('zones')
+      .select('id, name, color, x, y, width, height, description, floor_plan_photo_url, sort_order')
+      .eq('property_id', PROPERTY_ID)
+      .order('sort_order')
+      .order('name')
+
+    if (error) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error.message}`, is_error: true }
+    return { type: 'tool_result', tool_use_id: id, content: JSON.stringify(data ?? []) }
+  }
+
+  // ── manage_zone ──────────────────────────────────────────────────────────────
+  if (block.name === 'manage_zone') {
+    const input = block.input as {
+      action: 'create' | 'update' | 'delete'
+      zone_id?: string; name?: string; color?: string
+      x?: number; y?: number; width?: number; height?: number
+      description?: string; sort_order?: number
+    }
+
+    if (input.action === 'create') {
+      if (!input.name) return { type: 'tool_result', tool_use_id: id, content: 'name is required for create', is_error: true }
+      const { data, error } = await supabase
+        .from('zones')
+        .insert({
+          property_id:  PROPERTY_ID,
+          name:         input.name,
+          color:        input.color       ?? '#94a3b8',
+          x:            input.x           ?? 0,
+          y:            input.y           ?? 0,
+          width:        input.width       ?? 20,
+          height:       input.height      ?? 20,
+          description:  input.description ?? null,
+          sort_order:   input.sort_order  ?? 0,
+        })
+        .select('id, name, color, x, y, width, height')
+        .single()
+
+      if (error || !data) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error?.message}`, is_error: true }
+      changes.push({ type: 'project_updated', summary: `Created zone: ${data.name}` })
+      return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, ...data }) }
+    }
+
+    if (input.action === 'update') {
+      if (!input.zone_id) return { type: 'tool_result', tool_use_id: id, content: 'zone_id is required for update', is_error: true }
+      const updates: Record<string, unknown> = {}
+      if (input.name        !== undefined) updates.name        = input.name
+      if (input.color       !== undefined) updates.color       = input.color
+      if (input.x           !== undefined) updates.x           = input.x
+      if (input.y           !== undefined) updates.y           = input.y
+      if (input.width       !== undefined) updates.width       = input.width
+      if (input.height      !== undefined) updates.height      = input.height
+      if (input.description !== undefined) updates.description = input.description
+      if (input.sort_order  !== undefined) updates.sort_order  = input.sort_order
+
+      const { data, error } = await supabase
+        .from('zones')
+        .update(updates)
+        .eq('id', input.zone_id)
+        .eq('property_id', PROPERTY_ID)
+        .select('id, name, color, x, y, width, height')
+        .single()
+
+      if (error || !data) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error?.message}`, is_error: true }
+      changes.push({ type: 'project_updated', summary: `Updated zone: ${data.name}` })
+      return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, ...data }) }
+    }
+
+    if (input.action === 'delete') {
+      if (!input.zone_id) return { type: 'tool_result', tool_use_id: id, content: 'zone_id is required for delete', is_error: true }
+      const { error } = await supabase
+        .from('zones')
+        .delete()
+        .eq('id', input.zone_id)
+        .eq('property_id', PROPERTY_ID)
+
+      if (error) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error.message}`, is_error: true }
+      changes.push({ type: 'project_updated', summary: 'Deleted zone' })
+      return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true }) }
+    }
+
+    return { type: 'tool_result', tool_use_id: id, content: 'Unknown action — use create, update, or delete', is_error: true }
+  }
+
+  // ── get_spaces ───────────────────────────────────────────────────────────────
+  if (block.name === 'get_spaces') {
     const { zone_id } = block.input as { zone_id?: string }
 
     let query = supabase
-      .from('rooms')
+      .from('spaces')
       .select('id, zone_id, name, status, notes, sort_order, pos_x, pos_y, pos_w, pos_h')
       .eq('property_id', PROPERTY_ID)
       .order('sort_order')
@@ -566,11 +679,11 @@ Rules:
     return { type: 'tool_result', tool_use_id: id, content: JSON.stringify(data ?? []) }
   }
 
-  // ── manage_room ──────────────────────────────────────────────────────────────
-  if (block.name === 'manage_room') {
+  // ── manage_space ─────────────────────────────────────────────────────────────
+  if (block.name === 'manage_space') {
     const input = block.input as {
       action: 'create' | 'update' | 'delete'
-      zone_id?: string; room_id?: string; name?: string; status?: string
+      zone_id?: string; space_id?: string; name?: string; status?: string
       notes?: string; sort_order?: number
       pos_x?: number; pos_y?: number; pos_w?: number; pos_h?: number
     }
@@ -580,7 +693,7 @@ Rules:
         return { type: 'tool_result', tool_use_id: id, content: 'zone_id and name are required for create', is_error: true }
       }
       const { data, error } = await supabase
-        .from('rooms')
+        .from('spaces')
         .insert({
           property_id: PROPERTY_ID,
           zone_id:     input.zone_id,
@@ -595,12 +708,12 @@ Rules:
         .single()
 
       if (error || !data) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error?.message}`, is_error: true }
-      changes.push({ type: 'project_updated', summary: `Created room: ${data.name}` })
+      changes.push({ type: 'project_updated', summary: `Created space: ${data.name}` })
       return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, ...data }) }
     }
 
     if (input.action === 'update') {
-      if (!input.room_id) return { type: 'tool_result', tool_use_id: id, content: 'room_id is required for update', is_error: true }
+      if (!input.space_id) return { type: 'tool_result', tool_use_id: id, content: 'space_id is required for update', is_error: true }
       const updates: Record<string, unknown> = {}
       if (input.name       !== undefined) updates.name       = input.name
       if (input.status     !== undefined) updates.status     = input.status
@@ -612,28 +725,28 @@ Rules:
       if (input.pos_h      !== undefined) updates.pos_h      = input.pos_h
 
       const { data, error } = await supabase
-        .from('rooms')
+        .from('spaces')
         .update(updates)
-        .eq('id', input.room_id)
+        .eq('id', input.space_id)
         .eq('property_id', PROPERTY_ID)
         .select('id, name, status')
         .single()
 
       if (error || !data) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error?.message}`, is_error: true }
-      changes.push({ type: 'project_updated', summary: `Updated room: ${data.name}` })
+      changes.push({ type: 'project_updated', summary: `Updated space: ${data.name}` })
       return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true, ...data }) }
     }
 
     if (input.action === 'delete') {
-      if (!input.room_id) return { type: 'tool_result', tool_use_id: id, content: 'room_id is required for delete', is_error: true }
+      if (!input.space_id) return { type: 'tool_result', tool_use_id: id, content: 'space_id is required for delete', is_error: true }
       const { error } = await supabase
-        .from('rooms')
+        .from('spaces')
         .delete()
-        .eq('id', input.room_id)
+        .eq('id', input.space_id)
         .eq('property_id', PROPERTY_ID)
 
       if (error) return { type: 'tool_result', tool_use_id: id, content: `Error: ${error.message}`, is_error: true }
-      changes.push({ type: 'project_updated', summary: 'Deleted room' })
+      changes.push({ type: 'project_updated', summary: 'Deleted space' })
       return { type: 'tool_result', tool_use_id: id, content: JSON.stringify({ success: true }) }
     }
 
