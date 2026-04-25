@@ -50,11 +50,28 @@ This product has already proven that the concept is valuable in real use. See pr
 
 Phases A and B are complete. Parcel has been stabilized, hardened, and given a QA backbone. A substantial refinement pass (visual system, room tracking, agent tool improvements, UI polish) was completed as bridging work between stabilization and Lattice development.
 
+Phase C is active. C1 is complete.
+
+**C1 complete (2026-04-25):**
+- `lattices` table introduced (1:1 with user, owner_id unique)
+- `lattice_id` FK added to `properties` (nullable, backward compatible)
+- `member_role.viewer` renamed to `member_role.member`
+- `lib/get-lattice-id.ts` added
+- Properties POST auto-creates Lattice on first property creation
+- Migration 028 written; must be run in Supabase
+
+**Lattice user model (locked 2026-04-25):**
+- Lattice is strictly 1:1 with a user — private, not shared
+- Two roles in the system: `owner` (Lattice owner, full admin) and `member` (Parcel collaborator, full edit in Parcel only)
+- Parcel members go directly to the Parcel on login; they do not see the owner's Lattice
+- Parcel members may also have their own Lattice independently
+
 Outstanding Parcel items are tracked as deferred WARNs:
 - Hardcoded owner names in welcome page and system prompt — Phase E (multi-tenancy)
 - Visual tab continual improvement — parked, revisit when Lattice is stable
+- Existing production properties have `lattice_id = null` — Brady's Lattice auto-creates on next property creation, or C4 shell handles bootstrap
 
-The architecture is ready for the Lattice workspace layer to be built above it.
+**C2 next:** Global Context data model — `global_context` and `global_commitments` tables, API routes.
 
 ---
 
