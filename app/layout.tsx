@@ -13,13 +13,13 @@ export type PropertyEntry = { id: string; name: string }
 export async function generateMetadata(): Promise<Metadata> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { title: 'Parcel', description: 'Property Notebook' }
+  if (!user) return { title: 'Lattice', description: 'Your personal operating system' }
   const propertyId = await getPropertyId(supabase, user.id)
-  if (!propertyId) return { title: 'Parcel', description: 'Property Notebook' }
+  if (!propertyId) return { title: 'Lattice', description: 'Your personal operating system' }
   const { data } = await supabase.from('properties').select('name').eq('id', propertyId).single()
   return {
-    title: data?.name ? `${data.name} · Parcel` : 'Parcel',
-    description: 'Property Notebook',
+    title: data?.name ? `${data.name} · Lattice` : 'Lattice',
+    description: 'Your personal operating system',
   }
 }
 

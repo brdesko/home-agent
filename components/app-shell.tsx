@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, MessageSquare, Home, Bookmark, ShoppingBag, ChevronDown, Archive, Trash2 } from 'lucide-react'
+import { BookOpen, MessageSquare, Home, Bookmark, ShoppingBag, ChevronDown, Archive, Trash2, Layers, LayoutDashboard } from 'lucide-react'
 import SignOutButton from './sign-out-button'
 import { FloatingChat } from './floating-chat'
 import { AgentProvider } from './agent-context'
@@ -11,9 +11,15 @@ import { AgentProvider } from './agent-context'
 const SIDEBAR_BG = 'oklch(0.16 0.012 80)'
 const SAGE       = 'oklch(0.50 0.10 155)'
 
-const NAV: { href: string; label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; primary?: boolean }[] = [
-  { href: '/',             label: 'Notebook',     icon: BookOpen,       primary: true },
-  { href: '/agent',        label: 'Agent',        icon: MessageSquare,  primary: true },
+type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; primary?: boolean }
+
+const LATTICE_NAV: NavItem[] = [
+  { href: '/lattice', label: 'Overview', icon: LayoutDashboard, primary: true },
+]
+
+const PARCEL_NAV: NavItem[] = [
+  { href: '/',             label: 'Notebook',     icon: BookOpen,      primary: true },
+  { href: '/agent',        label: 'Agent',        icon: MessageSquare, primary: true },
   { href: '/home-details', label: 'Home Details', icon: Home },
   { href: '/references',   label: 'References',   icon: Bookmark },
   { href: '/purchases',    label: 'Purchases',    icon: ShoppingBag },
@@ -60,9 +66,9 @@ export function AppShell({ user, propertyName, propertyId, allProperties, active
         <div className="px-5 pt-6 pb-5 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <div style={{ backgroundColor: SAGE }} className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0">
-              <Home className="w-3.5 h-3.5 text-white" />
+              <Layers className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-display text-[18px] text-white leading-none tracking-tight">Parcel</span>
+            <span className="font-display text-[18px] text-white leading-none tracking-tight">Lattice</span>
           </div>
           {propertyName && (
             <PropertyDropdown
@@ -76,32 +82,25 @@ export function AppShell({ user, propertyName, propertyId, allProperties, active
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {NAV.map(({ href, label, icon: Icon, primary }) => {
+          {/* Lattice-level nav */}
+          {LATTICE_NAV.map(({ href, label, icon: Icon, primary }) => {
             const active = pathname === href
-            const linkStyle = active ? { backgroundColor: SAGE } : {}
-            const textColor = active ? 'white' : primary ? 'oklch(1 0 0 / 0.90)' : 'oklch(1 0 0 / 0.55)'
-            const iconColor = active ? 'white' : primary ? 'oklch(1 0 0 / 0.80)' : 'oklch(1 0 0 / 0.40)'
+            return (
+              <NavLink key={href} href={href} label={label} Icon={Icon} active={active} primary={primary} />
+            )
+          })}
+
+          {/* Parcel domain section */}
+          <div className="px-3 pt-4 pb-1">
+            <p className="text-[9px] uppercase tracking-widest font-semibold" style={{ color: 'oklch(1 0 0 / 0.25)' }}>
+              Parcel
+            </p>
+          </div>
+          {PARCEL_NAV.map(({ href, label, icon: Icon, primary }) => {
+            const active = pathname === href
             const showBadge = href === '/' && activeProjectCount > 0
             return (
-              <Link
-                key={href}
-                href={href}
-                style={linkStyle}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  active ? 'font-medium' : primary ? 'font-medium hover:bg-white/10' : 'hover:bg-white/8'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" style={{ color: iconColor }} />
-                <span style={{ color: textColor }}>{label}</span>
-                {showBadge && (
-                  <span
-                    className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none"
-                    style={{ backgroundColor: active ? 'rgba(255,255,255,0.25)' : SAGE, color: 'white' }}
-                  >
-                    {activeProjectCount}
-                  </span>
-                )}
-              </Link>
+              <NavLink key={href} href={href} label={label} Icon={Icon} active={active} primary={primary} badge={showBadge ? activeProjectCount : undefined} />
             )
           })}
 
@@ -138,6 +137,38 @@ export function AppShell({ user, propertyName, propertyId, allProperties, active
         <FloatingChat />
       </AgentProvider>
     </div>
+  )
+}
+
+function NavLink({ href, label, Icon, active, primary, badge }: {
+  href: string
+  label: string
+  Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+  active: boolean
+  primary?: boolean
+  badge?: number
+}) {
+  const textColor = active ? 'white' : primary ? 'oklch(1 0 0 / 0.90)' : 'oklch(1 0 0 / 0.55)'
+  const iconColor = active ? 'white' : primary ? 'oklch(1 0 0 / 0.80)' : 'oklch(1 0 0 / 0.40)'
+  return (
+    <Link
+      href={href}
+      style={active ? { backgroundColor: SAGE } : {}}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+        active ? 'font-medium' : primary ? 'font-medium hover:bg-white/10' : 'hover:bg-white/8'
+      }`}
+    >
+      <Icon className="w-4 h-4 shrink-0" style={{ color: iconColor }} />
+      <span style={{ color: textColor }}>{label}</span>
+      {badge != null && (
+        <span
+          className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none"
+          style={{ backgroundColor: active ? 'rgba(255,255,255,0.25)' : SAGE, color: 'white' }}
+        >
+          {badge}
+        </span>
+      )}
+    </Link>
   )
 }
 

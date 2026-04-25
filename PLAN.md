@@ -96,6 +96,12 @@ Outstanding Parcel items tracked as deferred WARNs:
 - Components: `SitePlan` accepts `zones` as a separate prop; `PropertyVisual` fetches from DB
 - Migration 030 run in Supabase
 
+**C4 complete (2026-04-26):**
+- Wordmark renamed from "Parcel" to "Lattice" (Layers icon); page `<title>` updated to "Property · Lattice"
+- AppShell nav restructured: "Overview" → `/lattice` at top, then "PARCEL" section label, then existing Parcel nav items
+- `NavLink` helper extracted to eliminate repeated nav rendering logic
+- `/lattice` page: server component showing financial snapshot (annual commitments, Parcel budget/spend), Domains section (Parcel active + Personal coming soon), Upcoming list (current/next quarter projects + commitments), budget conflict flags
+
 **C3 complete (2026-04-26):**
 - `GET /api/global-context/summary` — derived planning layer, no new DB tables
 - Financial rollup: global_commitments normalized to annual equivalent (by domain); Parcel project target_budget + actual_spend; quarterly_budget expense allocation for current year
