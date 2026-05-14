@@ -1,15 +1,64 @@
-import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Layers, Home, User } from 'lucide-react'
+import { Layers, Home, TrendingUp, Flower2, Zap, Sprout } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getLatticeId } from '@/lib/get-lattice-id'
 
-const BG          = 'oklch(0.97 0.03 85)'
-const AMBER       = 'oklch(0.75 0.14 75)'
-const AMBER_TEXT  = 'oklch(0.40 0.12 72)'
-const GREEN       = 'oklch(0.50 0.10 155)'
-const GREEN_TEXT  = 'oklch(0.36 0.10 155)'
+const BG = 'oklch(0.97 0.03 85)'
+
+type Module = {
+  label: string
+  bg: string
+  labelColor: string
+  Icon: LucideIcon
+  href?: string
+  soon?: boolean
+}
+
+const MODULES: Module[] = [
+  {
+    label:      'Lattice',
+    bg:         'oklch(0.75 0.14 75)',
+    labelColor: 'oklch(0.40 0.12 72)',
+    Icon:       Layers,
+  },
+  {
+    label:      'Parcel',
+    bg:         'oklch(0.50 0.10 155)',
+    labelColor: 'oklch(0.36 0.10 155)',
+    Icon:       Home,
+    href:       '/',
+  },
+  {
+    label:      'Arc',
+    bg:         'oklch(0.42 0.20 265)',
+    labelColor: 'oklch(0.28 0.16 265)',
+    Icon:       TrendingUp,
+    soon:       true,
+  },
+  {
+    label:      'Bloom',
+    bg:         'oklch(0.62 0.15 355)',
+    labelColor: 'oklch(0.40 0.12 355)',
+    Icon:       Flower2,
+    soon:       true,
+  },
+  {
+    label:      'Form',
+    bg:         'oklch(0.63 0.17 25)',
+    labelColor: 'oklch(0.42 0.14 25)',
+    Icon:       Zap,
+    soon:       true,
+  },
+  {
+    label:      'Tend',
+    bg:         'oklch(0.58 0.14 48)',
+    labelColor: 'oklch(0.38 0.12 48)',
+    Icon:       Sprout,
+    soon:       true,
+  },
+]
 
 export default async function LatticeHomePage() {
   const supabase = await createClient()
@@ -33,52 +82,34 @@ export default async function LatticeHomePage() {
       style={{ backgroundColor: BG }}
     >
       {/* Module widget strip */}
-      <div className="flex items-end gap-5 mb-12">
-
-        {/* Lattice — hub (active) */}
-        <Widget
-          label="Lattice"
-          labelColor={AMBER_TEXT}
-          bg={AMBER}
-          icon={<Layers className="w-7 h-7 text-white" />}
-        />
-
-        {/* Parcel — navigate into domain */}
-        <Link href="/" className="group">
-          <Widget
-            label="Parcel"
-            labelColor={GREEN_TEXT}
-            bg={GREEN}
-            icon={<Home className="w-7 h-7 text-white" />}
-            hoverable
-          />
-        </Link>
-
-        {/* Personal — coming soon */}
-        <Widget
-          label="Personal"
-          labelColor="oklch(0.62 0.02 85)"
-          bg="oklch(0.91 0.02 85)"
-          icon={<User className="w-6 h-6" style={{ color: 'oklch(0.70 0.03 85)' }} />}
-          dimmed
-        />
-
-        {/* Placeholder */}
-        <Widget
-          label=""
-          labelColor="transparent"
-          bg="oklch(0.93 0.01 85)"
-          icon={<span style={{ fontSize: 20, color: 'oklch(0.78 0.02 85)', letterSpacing: 2 }}>···</span>}
-          veryDimmed
-        />
-
+      <div className="flex items-end gap-4 mb-12">
+        {MODULES.map(({ label, bg, labelColor, Icon, href, soon }) => {
+          const widget = (
+            <Widget
+              label={label}
+              bg={bg}
+              labelColor={labelColor}
+              Icon={Icon}
+              soon={soon}
+              hoverable={!!href}
+            />
+          )
+          if (href) {
+            return (
+              <Link key={label} href={href} className="group">
+                {widget}
+              </Link>
+            )
+          }
+          return <div key={label}>{widget}</div>
+        })}
       </div>
 
       {/* Wordmark */}
       <div className="text-center">
         <h1
           className="font-display leading-none"
-          style={{ fontSize: 54, fontWeight: 300, letterSpacing: '-0.02em', color: AMBER_TEXT }}
+          style={{ fontSize: 54, fontWeight: 300, letterSpacing: '-0.02em', color: 'oklch(0.40 0.12 72)' }}
         >
           Lattice
         </h1>
@@ -92,37 +123,32 @@ export default async function LatticeHomePage() {
 
 function Widget({
   label,
-  labelColor,
   bg,
-  icon,
+  labelColor,
+  Icon,
+  soon,
   hoverable,
-  dimmed,
-  veryDimmed,
 }: {
   label: string
-  labelColor: string
   bg: string
-  icon: ReactNode
+  labelColor: string
+  Icon: LucideIcon
+  soon?: boolean
   hoverable?: boolean
-  dimmed?: boolean
-  veryDimmed?: boolean
 }) {
   return (
     <div
       className="flex flex-col items-center gap-2.5"
-      style={{ opacity: veryDimmed ? 0.18 : dimmed ? 0.32 : 1 }}
+      style={{ opacity: soon ? 0.42 : 1 }}
     >
       <div
         className={`w-[88px] h-[88px] rounded-[22px] flex items-center justify-center${hoverable ? ' transition-opacity group-hover:opacity-80' : ''}`}
         style={{ backgroundColor: bg }}
       >
-        {icon}
+        <Icon className="w-7 h-7 text-white" />
       </div>
-      <span
-        className="text-[11px] font-semibold tracking-wide"
-        style={{ color: labelColor }}
-      >
-        {label || ' '}
+      <span className="text-[11px] font-semibold tracking-wide" style={{ color: labelColor }}>
+        {label}
       </span>
     </div>
   )
