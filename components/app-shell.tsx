@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, MessageSquare, Home, Bookmark, ShoppingBag, ChevronDown, Archive, Trash2, Layers, LayoutDashboard } from 'lucide-react'
+import { BookOpen, MessageSquare, Home, Bookmark, ShoppingBag, ChevronDown, Archive, Trash2, Layers } from 'lucide-react'
 import SignOutButton from './sign-out-button'
 import { FloatingChat } from './floating-chat'
 import { AgentProvider } from './agent-context'
@@ -12,10 +12,6 @@ const SIDEBAR_BG = 'oklch(0.16 0.012 80)'
 const SAGE       = 'oklch(0.50 0.10 155)'
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; primary?: boolean }
-
-const LATTICE_NAV: NavItem[] = [
-  { href: '/lattice', label: 'Overview', icon: LayoutDashboard, primary: true },
-]
 
 const PARCEL_NAV: NavItem[] = [
   { href: '/',             label: 'Notebook',     icon: BookOpen,      primary: true },
@@ -39,7 +35,7 @@ type Props = {
 export function AppShell({ user, propertyName, propertyId, allProperties, activeProjectCount = 0, children }: Props) {
   const pathname    = usePathname()
   const router      = useRouter()
-  const showSidebar = !!user && pathname !== '/login'
+  const showSidebar = !!user && pathname !== '/login' && pathname !== '/lattice'
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -62,14 +58,20 @@ export function AppShell({ user, propertyName, propertyId, allProperties, active
       {/* Sidebar */}
       <aside style={{ backgroundColor: SIDEBAR_BG }} className="w-56 shrink-0 flex flex-col">
 
-        {/* Wordmark */}
-        <div className="px-5 pt-6 pb-5 border-b border-white/10">
-          <div className="flex items-center gap-2.5">
-            <div style={{ backgroundColor: SAGE }} className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0">
-              <Layers className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="font-display text-[18px] text-white leading-none tracking-tight">Lattice</span>
-          </div>
+        {/* Back to Lattice + property */}
+        <div className="px-4 pt-5 pb-4 border-b border-white/10">
+          <Link
+            href="/lattice"
+            className="flex items-center gap-2 mb-4 group w-fit"
+          >
+            <Layers className="w-3.5 h-3.5 shrink-0 transition-opacity group-hover:opacity-60" style={{ color: 'oklch(1 0 0 / 0.32)' }} />
+            <span
+              className="text-[11px] font-medium tracking-wide transition-opacity group-hover:opacity-60"
+              style={{ color: 'oklch(1 0 0 / 0.38)' }}
+            >
+              Lattice
+            </span>
+          </Link>
           {propertyName && (
             <PropertyDropdown
               propertyName={propertyName}
@@ -82,20 +84,6 @@ export function AppShell({ user, propertyName, propertyId, allProperties, active
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {/* Lattice-level nav */}
-          {LATTICE_NAV.map(({ href, label, icon: Icon, primary }) => {
-            const active = pathname === href
-            return (
-              <NavLink key={href} href={href} label={label} Icon={Icon} active={active} primary={primary} />
-            )
-          })}
-
-          {/* Parcel domain section */}
-          <div className="px-3 pt-4 pb-1">
-            <p className="text-[9px] uppercase tracking-widest font-semibold" style={{ color: 'oklch(1 0 0 / 0.25)' }}>
-              Parcel
-            </p>
-          </div>
           {PARCEL_NAV.map(({ href, label, icon: Icon, primary }) => {
             const active = pathname === href
             const showBadge = href === '/' && activeProjectCount > 0
