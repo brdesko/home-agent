@@ -20,7 +20,7 @@ export default async function LatticeHomePage() {
   if (!latticeId) {
     const { data: created } = await supabase
       .from('lattices')
-      .insert({ owner_id: user.id })
+      .insert({ owner_id: user.id, name: 'My Lattice' })
       .select('id')
       .single()
     latticeId = created?.id ?? null
