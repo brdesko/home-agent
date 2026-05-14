@@ -46,43 +46,46 @@ export default function LoginPage() {
           preserveAspectRatio="xMidYMid slice"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Regular dot grid */}
+          {/* Uniform dot grid — every 66px */}
           <defs>
             <pattern id="latticeDots" width="66" height="66" patternUnits="userSpaceOnUse">
-              <circle cx="33" cy="33" r="1.6" fill="oklch(0.48 0.14 72)" fillOpacity="0.22" />
+              <circle cx="33" cy="33" r="1.5" fill="oklch(0.48 0.14 72)" fillOpacity="0.20" />
             </pattern>
           </defs>
           <rect width="660" height="900" fill="url(#latticeDots)" />
 
-          {/* Connecting lines — suggests lattice structure */}
-          <g stroke="oklch(0.48 0.14 72)" fill="none">
-            <line x1="33"  y1="99"  x2="297" y2="99"  strokeWidth="0.7" strokeOpacity="0.18" />
-            <line x1="165" y1="231" x2="561" y2="231" strokeWidth="0.7" strokeOpacity="0.18" />
-            <line x1="99"  y1="363" x2="429" y2="363" strokeWidth="0.7" strokeOpacity="0.15" />
-            <line x1="231" y1="495" x2="627" y2="495" strokeWidth="0.7" strokeOpacity="0.18" />
-            <line x1="33"  y1="627" x2="363" y2="627" strokeWidth="0.7" strokeOpacity="0.15" />
-            <line x1="165" y1="759" x2="495" y2="759" strokeWidth="0.7" strokeOpacity="0.18" />
-            <line x1="297" y1="891" x2="627" y2="891" strokeWidth="0.7" strokeOpacity="0.15" />
-
-            <line x1="297" y1="99"  x2="231" y2="495" strokeWidth="0.7" strokeOpacity="0.14" />
-            <line x1="561" y1="231" x2="627" y2="495" strokeWidth="0.7" strokeOpacity="0.14" />
-            <line x1="99"  y1="363" x2="165" y2="759" strokeWidth="0.7" strokeOpacity="0.12" />
-            <line x1="429" y1="363" x2="495" y2="759" strokeWidth="0.7" strokeOpacity="0.14" />
-            <line x1="231" y1="495" x2="297" y2="891" strokeWidth="0.7" strokeOpacity="0.12" />
+          {/* Horizontal segments — all on-grid, no diagonals */}
+          <g stroke="oklch(0.48 0.14 72)" strokeWidth="0.8" fill="none">
+            <line x1="99"  y1="165" x2="429" y2="165" strokeOpacity="0.22" />
+            <line x1="231" y1="297" x2="627" y2="297" strokeOpacity="0.22" />
+            <line x1="33"  y1="495" x2="363" y2="495" strokeOpacity="0.22" />
+            <line x1="165" y1="627" x2="561" y2="627" strokeOpacity="0.22" />
+            <line x1="99"  y1="759" x2="495" y2="759" strokeOpacity="0.22" />
+            <line x1="297" y1="858" x2="627" y2="858" strokeOpacity="0.18" />
           </g>
 
-          {/* Key nodes — larger dots at structural intersections */}
+          {/* Vertical segments — on the same grid columns */}
+          <g stroke="oklch(0.48 0.14 72)" strokeWidth="0.8" fill="none">
+            <line x1="165" y1="165" x2="165" y2="495" strokeOpacity="0.18" />
+            <line x1="363" y1="99"  x2="363" y2="495" strokeOpacity="0.18" />
+            <line x1="495" y1="297" x2="495" y2="759" strokeOpacity="0.18" />
+            <line x1="231" y1="495" x2="231" y2="858" strokeOpacity="0.15" />
+          </g>
+
+          {/* Key nodes — larger dots at line intersections only */}
           <g fill="oklch(0.48 0.14 72)">
-            <circle cx="297" cy="99"  r="4.5" fillOpacity="0.40" />
-            <circle cx="165" cy="231" r="3.5" fillOpacity="0.35" />
-            <circle cx="561" cy="231" r="4.5" fillOpacity="0.40" />
-            <circle cx="99"  cy="363" r="3.0" fillOpacity="0.30" />
-            <circle cx="429" cy="363" r="4.0" fillOpacity="0.38" />
-            <circle cx="231" cy="495" r="4.5" fillOpacity="0.42" />
-            <circle cx="627" cy="495" r="3.0" fillOpacity="0.28" />
-            <circle cx="165" cy="759" r="4.0" fillOpacity="0.35" />
-            <circle cx="495" cy="759" r="4.5" fillOpacity="0.40" />
-            <circle cx="297" cy="891" r="3.5" fillOpacity="0.30" />
+            <circle cx="165" cy="165" r="4.0" fillOpacity="0.40" />
+            <circle cx="363" cy="165" r="4.5" fillOpacity="0.44" />
+            <circle cx="231" cy="297" r="3.5" fillOpacity="0.36" />
+            <circle cx="495" cy="297" r="4.5" fillOpacity="0.44" />
+            <circle cx="165" cy="495" r="4.0" fillOpacity="0.40" />
+            <circle cx="363" cy="495" r="4.0" fillOpacity="0.40" />
+            <circle cx="231" cy="495" r="3.5" fillOpacity="0.36" />
+            <circle cx="165" cy="627" r="3.5" fillOpacity="0.34" />
+            <circle cx="495" cy="627" r="4.0" fillOpacity="0.38" />
+            <circle cx="231" cy="759" r="4.0" fillOpacity="0.40" />
+            <circle cx="495" cy="759" r="4.5" fillOpacity="0.44" />
+            <circle cx="231" cy="858" r="3.5" fillOpacity="0.34" />
           </g>
         </svg>
 
