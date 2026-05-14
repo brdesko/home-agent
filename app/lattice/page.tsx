@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Layers, Home, TrendingUp, Flower2, Zap, Sprout } from 'lucide-react'
+import { Layers, Home, TrendingUp, Flower2, Zap, Sprout, Gamepad2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getLatticeId } from '@/lib/get-lattice-id'
@@ -14,9 +14,10 @@ type Module = {
   Icon: LucideIcon
   href?: string
   soon?: boolean
+  outlined?: boolean
 }
 
-const MODULES: Module[] = [
+const DOMAIN_MODULES: Module[] = [
   {
     label:      'Lattice',
     bg:         'oklch(0.75 0.14 75)',
@@ -60,6 +61,15 @@ const MODULES: Module[] = [
   },
 ]
 
+const CONTROL_PANEL_MODULE: Module = {
+  label:      'Control Panel',
+  bg:         'white',
+  labelColor: 'oklch(0.25 0 0)',
+  Icon:       Gamepad2,
+  soon:       true,
+  outlined:   true,
+}
+
 export default async function LatticeHomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -76,6 +86,12 @@ export default async function LatticeHomePage() {
   }
   if (!latticeId) redirect('/new-property')
 
+  // Control Panel is owner-only. ADMIN_USER_ID env var gates it.
+  // If unset (single-user personal deployment), shows by default.
+  const adminUserId = process.env.ADMIN_USER_ID
+  const isAdmin = !adminUserId || user.id === adminUserId
+  const modules = isAdmin ? [...DOMAIN_MODULES, CONTROL_PANEL_MODULE] : DOMAIN_MODULES
+
   return (
     <div
       className="h-full flex flex-col items-center justify-center select-none"
@@ -83,7 +99,7 @@ export default async function LatticeHomePage() {
     >
       {/* Module widget strip */}
       <div className="flex items-end gap-4 mb-12">
-        {MODULES.map(({ label, bg, labelColor, Icon, href, soon }) => {
+        {modules.map(({ label, bg, labelColor, Icon, href, soon, outlined }) => {
           const widget = (
             <Widget
               label={label}
@@ -91,6 +107,7 @@ export default async function LatticeHomePage() {
               labelColor={labelColor}
               Icon={Icon}
               soon={soon}
+              outlined={outlined}
               hoverable={!!href}
             />
           )
@@ -127,6 +144,7 @@ function Widget({
   labelColor,
   Icon,
   soon,
+  outlined,
   hoverable,
 }: {
   label: string
@@ -134,6 +152,7 @@ function Widget({
   labelColor: string
   Icon: LucideIcon
   soon?: boolean
+  outlined?: boolean
   hoverable?: boolean
 }) {
   return (
@@ -143,9 +162,15 @@ function Widget({
     >
       <div
         className={`w-[88px] h-[88px] rounded-[22px] flex items-center justify-center${hoverable ? ' transition-opacity group-hover:opacity-80' : ''}`}
-        style={{ backgroundColor: bg }}
+        style={{
+          backgroundColor: bg,
+          border: outlined ? '1.5px solid oklch(0.28 0 0)' : undefined,
+        }}
       >
-        <Icon className="w-7 h-7 text-white" />
+        <Icon
+          className="w-7 h-7"
+          style={{ color: outlined ? 'oklch(0.25 0 0)' : 'white' }}
+        />
       </div>
       <span className="text-[11px] font-semibold tracking-wide" style={{ color: labelColor }}>
         {label}
