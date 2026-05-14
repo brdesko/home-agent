@@ -16,7 +16,15 @@ export default async function LatticeHomePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const latticeId = await getLatticeId(supabase, user.id)
+  let latticeId = await getLatticeId(supabase, user.id)
+  if (!latticeId) {
+    const { data: created } = await supabase
+      .from('lattices')
+      .insert({ owner_id: user.id })
+      .select('id')
+      .single()
+    latticeId = created?.id ?? null
+  }
   if (!latticeId) redirect('/new-property')
 
   return (

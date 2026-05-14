@@ -12,7 +12,7 @@ export default function LoginPage() {
   // Redirect immediately if a valid session already exists
   useEffect(() => {
     createClient().auth.getSession().then(({ data: { session } }) => {
-      if (session) window.location.href = '/'
+      if (session) window.location.href = '/lattice'
     })
   }, []);
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      window.location.href = '/';
+      window.location.href = '/lattice';
     }
   }
 
@@ -36,7 +36,7 @@ export default function LoginPage() {
       {/* ── Left panel — brand + imagery ─────────────────────────────── */}
       <div
         className="hidden md:flex flex-col justify-between w-[55%] relative overflow-hidden p-14"
-        style={{ backgroundColor: 'oklch(0.50 0.10 155)' }}
+        style={{ backgroundColor: 'oklch(0.56 0.16 70)' }}
       >
         {/* Site-plan illustration — artwork lives in the lower two-thirds, title area stays clear */}
         <svg
@@ -140,20 +140,20 @@ export default function LoginPage() {
             className="font-display tracking-tight leading-none"
             style={{ color: 'rgba(255,255,255,0.97)', fontSize: '72px', fontWeight: 300 }}
           >
-            Parcel
+            Lattice
           </p>
           <p
             className="text-base"
             style={{ color: 'rgba(255,255,255,0.60)' }}
           >
-            Your home, thoughtfully managed.
+            Your personal operating system.
           </p>
         </div>
 
         {/* Bottom caption */}
         <div className="relative z-10">
           <p className="text-[11px] tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.25)' }}>
-            Property intelligence
+            Life, organized.
           </p>
         </div>
       </div>
@@ -166,15 +166,15 @@ export default function LoginPage() {
         {/* Mobile-only wordmark */}
         <p
           className="md:hidden font-display text-3xl font-normal mb-10"
-          style={{ color: 'oklch(0.50 0.10 155)' }}
+          style={{ color: 'oklch(0.56 0.16 70)' }}
         >
-          Parcel
+          Lattice
         </p>
 
         <div className="w-full max-w-sm space-y-8">
           <div className="space-y-1">
             <h1 className="text-2xl font-display font-normal text-zinc-900">Welcome back.</h1>
-            <p className="text-sm text-zinc-400">Sign in to your property notebook</p>
+            <p className="text-sm text-zinc-400">Sign in to your workspace</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -205,7 +205,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full rounded-lg px-4 py-3 text-sm font-medium text-white transition-opacity disabled:opacity-50"
-              style={{ backgroundColor: 'oklch(0.50 0.10 155)' }}
+              style={{ backgroundColor: 'oklch(0.56 0.16 70)' }}
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
