@@ -1,6 +1,6 @@
 # Lattice Product Plan
 
-Living document. Updated for the transition from Parcel-as-product to Lattice-as-product. Last touched: 2026-04-24.
+Living document. Updated for the transition from Parcel-as-product to Lattice-as-product. Last touched: 2026-05-15.
 
 ---
 
@@ -50,7 +50,7 @@ This product has already proven that the concept is valuable in real use. See pr
 
 Phases A and B are complete. Parcel has been stabilized, hardened, and given a QA backbone. A substantial refinement pass (visual system, room tracking, agent tool improvements, UI polish) was completed as bridging work between stabilization and Lattice development.
 
-Phase C is active. C1 and C2 are complete.
+Phase C is complete. Phase D is active.
 
 **C1 complete (2026-04-25):**
 - `lattices` table introduced (1:1 with user, owner_id unique)
@@ -468,3 +468,4 @@ These should remain visible as the product evolves:
 - **2026-04-21:** PM Agent and QA Agent scoped to Phase C; evolution charter to be written collaboratively.
 - **2026-04-22:** Product expanded to "Lattice" — Parcel becomes a domain within a broader Life OS. CLAUDE.md and PLAN.md replaced with Lattice versions. Active work: Phase A (Parcel stabilization).
 - **2026-04-24:** Roadmap resequenced. Admin agents moved to after Lattice framework (Phase D, not Phase C). Rationale: admin agents belong at the Lattice layer — building them before the workspace exists would put them in the wrong place. New active phase: C (Lattice/Workspace Core Architecture).
+- **2026-05-15:** Sow domain migrated from standalone Garden Agent into Lattice as a full module. `/sow` route live with Tasks, Garden Map, Timeline, Shopping tabs. Garden map plots are user-editable (name + color theme) via the Edit tab in the side panel — no code required for replanting or next-season changes. Data starts fresh (old app stored in localStorage, not Supabase). Plot structural/agronomic data lives in constants; user customizations stored in `garden_data` JSONB. Hub updated to flex-wrap layout. Mobile-responsive throughout. Phase C complete. Active phase: D (Admin Agents + Control Panel).
