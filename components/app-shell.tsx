@@ -35,7 +35,7 @@ type Props = {
 export function AppShell({ user, propertyName, propertyId, allProperties, activeProjectCount = 0, children }: Props) {
   const pathname    = usePathname()
   const router      = useRouter()
-  const showSidebar = !!user && pathname !== '/login' && pathname !== '/lattice'
+  const showSidebar = !!user && pathname !== '/login' && pathname !== '/lattice' && !pathname.startsWith('/sow')
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

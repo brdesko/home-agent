@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Layers, Home, TrendingUp, Flower2, Zap, Sprout, Gamepad2 } from 'lucide-react'
+import { Layers, Home, TrendingUp, Flower2, Zap, Sprout, Gamepad2, TreeDeciduous } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getLatticeId } from '@/lib/get-lattice-id'
@@ -59,6 +59,13 @@ const DOMAIN_MODULES: Module[] = [
     Icon:       Sprout,
     soon:       true,
   },
+  {
+    label:      'Sow',
+    bg:         'oklch(0.42 0.13 140)',
+    labelColor: 'oklch(0.28 0.10 140)',
+    Icon:       TreeDeciduous,
+    href:       '/sow',
+  },
 ]
 
 const CONTROL_PANEL_MODULE: Module = {
@@ -98,7 +105,7 @@ export default async function LatticeHomePage() {
       style={{ backgroundColor: BG }}
     >
       {/* Module widget strip */}
-      <div className="flex items-end gap-4 mb-12">
+      <div className="flex flex-wrap justify-center items-end gap-6 mb-12 max-w-3xl px-6">
         {modules.map(({ label, bg, labelColor, Icon, href, soon, outlined }) => {
           const widget = (
             <Widget
